@@ -1,17 +1,33 @@
 # Morning Cafe — Architecture
 
-A practice web shop where a customer **builds a custom coffee** and **buys it**
-with a **fake payment**. No real money, no real cards.
+A practice web shop: the customer is welcomed, browses the coffee menu, picks a
+coffee, optionally adds flavours, chooses **dine-in or takeaway**, sees the cost,
+pays with a **fake card**, and gets a thank-you page. No real money, no real cards.
 
-## 1. Goals
+## 1. Customer journey
 
-| Goal | How we meet it |
-|------|----------------|
-| Clean separation of concerns | Layered architecture (Presentation → Service → Domain → Data) |
-| Business logic is testable without HTTP or a browser | Logic lives in plain Python services/domain classes |
-| One source of truth for business rules | Web pages and the REST API both call the **same services** |
-| Confidence | Test pyramid: unit → API → Playwright E2E |
-| Traceable history | One git branch + commit per step, merged after review |
+```mermaid
+flowchart LR
+    H[🏠 Home<br/>welcome] --> M[☕ Menu<br/>coffee types]
+    M --> C[✨ Customize<br/>flavours · dine-in/takeaway · qty]
+    C --> S[🧾 Summary<br/>cost breakdown]
+    S --> P[💳 Pay<br/>fake card]
+    P -->|approved| T[🙏 Thank you<br/>order number]
+    P -->|declined| P
+    S -->|change| C
+```
+
+| # | URL | Page | What happens |
+|---|-----|------|--------------|
+| 1 | `/` | **Home** | Welcome message, short intro, "See our menu" button |
+| 2 | `/menu/` | **Menu** | Coffee types from the database (name, description, price) |
+| 3 | `/order/<coffee>/` | **Customize** | Optional flavours (multi-select), dine-in or takeaway, quantity. Price updates live. |
+| 4 | `/order/summary/` | **Summary** | Line-by-line cost: coffee, flavours, takeaway cup fee, total |
+| 5 | `/order/pay/` | **Pay** | Name + fake card form |
+| 6 | `/thank-you/<number>/` | **Thank you** | "Thank you, Sara!" + order number + what was ordered |
+
+The draft order (steps 3–4) is kept in the browser session. It is saved to the
+database as an `Order` only when the customer goes to pay.
 
 ## 2. Tech stack
 
@@ -20,31 +36,46 @@ with a **fake payment**. No real money, no real cards.
 | Language | Python 3.14 |
 | Web framework | Django 6.1 |
 | REST API | Django REST Framework 3.18 |
-| Pages | Django templates + a little vanilla JS (live price via the API) + plain CSS |
-| Database | SQLite (dev) |
+| Pages | Django templates + small vanilla JS (live price via the API) + plain CSS |
+| Database | **MySQL 8** (driver `mysqlclient`), configured through environment variables. SQLite fallback for quick local runs. |
 | Tests | pytest, pytest-django, pytest-playwright |
 | Code quality | ruff (lint + format) |
+
+### Database configuration
+
+Settings read from environment variables (`.env`, never committed):
+
+```
+DB_ENGINE=mysql          # or sqlite
+DB_NAME=morning_cafe
+DB_USER=cafe
+DB_PASSWORD=...
+DB_HOST=127.0.0.1
+DB_PORT=3306
+```
+
+The MySQL user needs `CREATE` rights so pytest can create the `test_morning_cafe` database.
 
 ## 3. Layered architecture
 
 ```mermaid
 flowchart TD
     subgraph Presentation
-        W[Web views + templates<br/>apps/*/views.py]
-        A[REST API<br/>apps/*/api/]
+        W[Web pages<br/>apps/web]
+        A[REST API<br/>apps/*/api]
     end
     subgraph Service["Service layer (use cases)"]
-        S1[CartService]
-        S2[CheckoutService]
-        S3[MenuService]
+        S1[MenuService]
+        S2[OrderService]
+        S3[PaymentService]
     end
-    subgraph Domain
-        B[DrinkBuilder]
+    subgraph Domain["Domain (pure Python)"]
+        B[OrderBuilder]
         P[PricingStrategy]
         G[PaymentGateway]
     end
     subgraph Data
-        M[(Django models / ORM)]
+        M[(MySQL via Django ORM)]
     end
     W --> S1 & S2 & S3
     A --> S1 & S2 & S3
@@ -53,96 +84,130 @@ flowchart TD
 ```
 
 **Rules**
-- Views (web or API) are thin: parse input → call a service → render/serialize output.
-- Services contain the use cases and are the only place that writes to the database.
-- Domain classes are pure Python (no Django imports where possible) → fast unit tests.
-- Lower layers never import from higher layers.
+- Views (web or API) are thin: read input → call a service → render/serialize.
+- Services hold the use cases and are the only code that writes to the database.
+- Domain classes are plain Python → fast unit tests, no database needed.
+- Lower layers never import higher layers.
 
 ## 4. Design patterns
 
 | Pattern | Where | Why |
 |---------|-------|-----|
-| **Builder** | `DrinkBuilder` | A coffee is built step by step: base → size → milk → extra shots → syrups. The builder validates each step and produces an immutable `DrinkSpec`. |
-| **Strategy** | `PricingStrategy` (`StandardPricing`, `HappyHourPricing`, …) | Price rules can change without touching the builder or the cart. |
-| **Strategy + Factory** | `PaymentGateway` (`FakeCardGateway`), created by `get_payment_gateway()` | Checkout depends on an interface, not a concrete gateway. A real gateway could be added later without changing checkout. |
-| **Service layer** | `CartService`, `CheckoutService`, `MenuService` | Keeps business logic out of views. Shared by web and API. |
-| **Value object** | `DrinkSpec`, `Money` (Decimal-based) | Immutable, comparable, no float rounding bugs. |
-| **DTO / Serializer** | DRF serializers | Validates input and shapes output at the API boundary. |
+| **Builder** | `OrderBuilder` | The order is assembled step by step: coffee → flavours → service type → quantity → `build()`. Each step is validated; the result is an immutable `OrderDraft`. |
+| **Strategy** | `PricingStrategy`: `DineInPricing`, `TakeawayPricing` | Dine-in and takeaway are priced differently (takeaway adds a cup fee). New rules (e.g. happy hour) = new class, no changes elsewhere. |
+| **Factory** | `pricing_for(service_type)`, `get_payment_gateway()` | Picks the right strategy/gateway so callers don't use `if/else` chains. |
+| **Strategy (gateway)** | `PaymentGateway` interface → `FakeCardGateway` | Payment depends on an interface; a real provider could be added later. |
+| **Service layer** | `MenuService`, `OrderService`, `PaymentService` | Business logic in one place, shared by pages and API. |
+| **Value objects** | `Money` (Decimal), `OrderDraft` | Immutable, no float rounding errors. |
+| **DTO** | DRF serializers | Validate input and shape output at the API boundary. |
 
-### Builder example (target API)
+### Target code
 
 ```python
-drink = (
-    DrinkBuilder(menu)
-    .base("espresso")
-    .size("large")
-    .milk("oat")
-    .extra_shots(1)
-    .syrup("vanilla")
-    .build()          # -> DrinkSpec, raises ValidationError if invalid
+draft = (
+    OrderBuilder(menu)
+    .coffee("cappuccino")
+    .add_flavour("vanilla")
+    .add_flavour("caramel")
+    .service("takeaway")
+    .quantity(2)
+    .build()                       # -> OrderDraft, raises ValidationError if invalid
 )
-price = StandardPricing().price(drink)   # -> Money("5.40")
+quote = pricing_for(draft.service).quote(draft)
+# quote.lines -> [("Cappuccino", 3.50), ("Vanilla", 0.50), ("Caramel", 0.50), ("Takeaway cup", 0.30)]
+# quote.total -> Money("9.60")    # (3.50 + 0.50 + 0.50 + 0.30) × 2
 ```
 
-## 5. Domain model
+## 5. Pricing rules
+
+| Item | Rule |
+|------|------|
+| Coffee | Price from the menu (`CoffeeType.price`) |
+| Flavour | Each selected flavour adds its price (`Flavour.price`); 0–3 flavours allowed |
+| Dine-in | No extra fee |
+| Takeaway | + cup fee per drink (setting `TAKEAWAY_CUP_FEE`, default 0.30) |
+| Quantity | 1–10, multiplies the per-drink price |
+
+Prices are copied onto the order at checkout so later menu changes don't rewrite old orders.
+
+## 6. Data model (MySQL tables)
 
 ```mermaid
 erDiagram
-    BASE ||--o{ ORDER_ITEM : "is base of"
-    SIZE ||--o{ ORDER_ITEM : "sized as"
-    MILK |o--o{ ORDER_ITEM : "uses"
-    ORDER_ITEM }o--o{ SYRUP : "flavoured with"
-    CART ||--o{ ORDER_ITEM : "contains"
-    ORDER ||--|{ ORDER_ITEM : "contains"
+    COFFEE_TYPE ||--o{ ORDER : "ordered as"
+    ORDER ||--o{ ORDER_FLAVOUR : "has"
+    FLAVOUR ||--o{ ORDER_FLAVOUR : "used in"
     ORDER ||--o| PAYMENT : "paid by"
 
-    BASE { string code  string name  decimal price }
-    SIZE { string code  string name  decimal multiplier }
-    MILK { string code  string name  decimal price }
-    SYRUP { string code  string name  decimal price }
-    ORDER_ITEM { int quantity  int extra_shots  decimal unit_price  string name }
-    CART { string session_key }
-    ORDER { string number  string status  decimal total  string customer_name }
-    PAYMENT { string status  string last4  string reference }
+    COFFEE_TYPE {
+        int id PK
+        string name
+        string slug UK
+        string description
+        decimal price
+        bool is_available
+    }
+    FLAVOUR {
+        int id PK
+        string name
+        string slug UK
+        decimal price
+        bool is_available
+    }
+    ORDER {
+        int id PK
+        string number UK
+        string customer_name
+        int coffee_type_id FK
+        string coffee_name
+        decimal coffee_price
+        string service_type "dine_in | takeaway"
+        int quantity
+        decimal service_fee
+        decimal total
+        string status "pending | paid | failed"
+        datetime created_at
+    }
+    ORDER_FLAVOUR {
+        int id PK
+        int order_id FK
+        int flavour_id FK
+        string flavour_name
+        decimal flavour_price
+    }
+    PAYMENT {
+        int id PK
+        int order_id FK
+        string status "approved | declined"
+        string card_last4
+        string reference
+        datetime created_at
+    }
 ```
 
-- **Menu** (`Base`, `Size`, `Milk`, `Syrup`) is admin-editable catalogue data.
-- **Cart** is tied to the browser session (no login needed).
-- **Order** is created at checkout; `unit_price` is copied onto the item so later menu price
-  changes don't rewrite history.
-- **Order status:** `PENDING → PAID` or `PENDING → FAILED`.
+**Seed data** (`python manage.py seed_menu`):
+- Coffees: Espresso, Americano, Cappuccino, Latte, Flat White, Mocha
+- Flavours: Vanilla, Caramel, Hazelnut, Cinnamon
 
-## 6. Fake payment rules
+## 7. Fake payment rules
 
 | Card number | Result |
 |-------------|--------|
-| `4242 4242 4242 4242` | Approved |
-| `4000 0000 0000 0002` | Declined |
-| Anything failing the Luhn check | Validation error |
+| `4242 4242 4242 4242` | Approved → order `paid` → thank-you page |
+| `4000 0000 0000 0002` | Declined → order `failed`, error shown, customer can retry |
+| Fails Luhn check / bad expiry / bad CVC | Form validation error |
 
 Only the last 4 digits are stored. Full card numbers are never saved or logged.
-
-## 7. Web pages
-
-| URL | Page |
-|-----|------|
-| `/` | Home + menu overview |
-| `/build/` | Build your coffee (live price preview) |
-| `/cart/` | Cart: change quantity, remove items |
-| `/checkout/` | Name + fake card form |
-| `/orders/<number>/` | Order confirmation / receipt |
 
 ## 8. REST API (`/api/v1/`)
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| GET | `/menu/` | All bases, sizes, milks, syrups |
-| POST | `/drinks/quote/` | Price a drink spec without saving it |
-| GET | `/cart/` | Current cart |
-| POST | `/cart/items/` | Add a built drink |
-| PATCH | `/cart/items/<id>/` | Change quantity |
-| DELETE | `/cart/items/<id>/` | Remove item |
-| POST | `/checkout/` | Pay (fake) and create an order |
+| GET | `/coffees/` | Available coffee types |
+| GET | `/flavours/` | Available flavours |
+| POST | `/orders/quote/` | Price a draft (used for the live price) — nothing saved |
+| POST | `/orders/` | Create a pending order |
+| POST | `/orders/<number>/pay/` | Fake payment |
 | GET | `/orders/<number>/` | Order details |
 
 Errors use one format: `{"error": {"code": "...", "message": "...", "fields": {...}}}`.
@@ -151,19 +216,19 @@ Errors use one format: `{"error": {"code": "...", "message": "...", "fields": {.
 
 ```
 morning-cafe/
-├── config/                 # Django project (settings, urls)
+├── config/                 # settings (env-driven, MySQL), urls
 ├── apps/
-│   ├── menu/               # catalogue models, MenuService, admin, seed command
-│   ├── drinks/             # DrinkBuilder, DrinkSpec, pricing strategies (pure domain)
-│   ├── cart/               # Cart models, CartService
-│   ├── orders/             # Order models, CheckoutService
-│   ├── payments/           # PaymentGateway interface + FakeCardGateway
-│   └── web/                # page views, templates, static (css/js)
+│   ├── menu/               # CoffeeType, Flavour, MenuService, admin, seed_menu
+│   ├── ordering/           # OrderBuilder, OrderDraft, Money, pricing strategies (domain)
+│   ├── orders/             # Order, OrderFlavour models, OrderService
+│   ├── payments/           # PaymentGateway, FakeCardGateway, Payment model, PaymentService
+│   └── web/                # page views, templates, static css/js
 ├── tests/
 │   ├── unit/               # domain + services
 │   ├── api/                # DRF endpoint tests
 │   └── e2e/                # Playwright browser tests
 ├── docs/ARCHITECTURE.md
+├── .env.example
 ├── requirements.txt
 ├── pyproject.toml          # pytest + ruff config
 └── manage.py
@@ -173,28 +238,30 @@ morning-cafe/
 
 ```mermaid
 flowchart BT
-    U["Unit tests (many, fast)<br/>builder, pricing, payment, services"]
-    I["API tests (some)<br/>DRF APIClient, status codes, error format"]
-    E["E2E tests (few, slow)<br/>Playwright: build → cart → pay → receipt"]
+    U["Unit tests (many, fast)<br/>builder, pricing, Luhn, services"]
+    I["API tests (some)<br/>status codes, validation, error format"]
+    E["E2E tests (few)<br/>Playwright: home → menu → customize → summary → pay → thank you"]
     U --> I --> E
 ```
 
-Key E2E scenarios:
-1. Build a coffee, see the live price, add to cart.
-2. Change quantity / remove in the cart.
-3. Checkout with the approved card → receipt page shows the order number.
-4. Checkout with the declined card → error message, cart still intact.
+Key Playwright scenarios:
+1. Home shows the welcome message; "See our menu" opens the menu.
+2. Menu lists the coffee types from the database.
+3. Pick a coffee, add flavours, switch dine-in ↔ takeaway → price updates live.
+4. Summary shows the correct line items and total.
+5. Pay with the approved card → thank-you page with name and order number.
+6. Pay with the declined card → error message, can retry.
 
 ## 11. Delivery plan (one branch + commit per step, approve before merging)
 
 | Step | Branch | Content |
 |------|--------|---------|
 | 1 | `step-1-architecture` | This document, `.gitignore` |
-| 2 | `step-2-project-setup` | Settings cleanup (env secret key), `apps/` skeleton, requirements, pytest + ruff config |
-| 3 | `step-3-menu` | Menu models, admin, migrations, `seed_menu` command, tests |
-| 4 | `step-4-domain` | `DrinkBuilder`, `DrinkSpec`, `Money`, pricing strategies + unit tests |
-| 5 | `step-5-cart-checkout` | Cart/Order models, services, fake payment gateway + tests |
+| 2 | `step-2-project-setup` | Env-based settings, MySQL config + `.env.example`, `apps/` skeleton, requirements, pytest + ruff |
+| 3 | `step-3-menu` | `CoffeeType`, `Flavour` models, admin, migrations, `seed_menu`, tests |
+| 4 | `step-4-domain` | `OrderBuilder`, `OrderDraft`, `Money`, pricing strategies + unit tests |
+| 5 | `step-5-orders-payments` | Order/Payment models, services, fake gateway + tests |
 | 6 | `step-6-api` | REST API + API tests |
-| 7 | `step-7-web` | Pages, templates, CSS, JS live price |
+| 7 | `step-7-web` | Home, Menu, Customize, Summary, Pay, Thank-you pages |
 | 8 | `step-8-e2e` | Playwright E2E tests |
-| 9 | `step-9-polish` | README, CI (GitHub Actions), final cleanup |
+| 9 | `step-9-polish` | README, CI (GitHub Actions with a MySQL service), cleanup |
