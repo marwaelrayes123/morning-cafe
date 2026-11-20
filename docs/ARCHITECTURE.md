@@ -91,6 +91,24 @@ flowchart TD
 
 ## 4. Design patterns
 
+### 4.1 Architectural pattern: MVT + Service Layer
+
+The most common setup in professional Django projects today is Django's own
+**MVT** (Model–View–Template, Django's version of MVC) plus a **Service Layer**:
+
+| Piece | Responsibility |
+|-------|----------------|
+| **Model** | Tables and simple data rules (Django ORM) |
+| **View** | HTTP only: read request → call service → return response |
+| **Template** | HTML rendering |
+| **Service** | All business logic / use cases ("create order", "pay order") |
+
+We deliberately do **not** add a separate Repository layer: Django's ORM
+(models + managers/querysets) already plays that role, and wrapping it again is a
+common source of over-engineering in Django codebases.
+
+### 4.2 Design patterns in the application code
+
 | Pattern | Where | Why |
 |---------|-------|-----|
 | **Builder** | `OrderBuilder` | The order is assembled step by step: coffee → flavours → service type → quantity → `build()`. Each step is validated; the result is an immutable `OrderDraft`. |
@@ -242,6 +260,82 @@ flowchart BT
     I["API tests (some)<br/>status codes, validation, error format"]
     E["E2E tests (few)<br/>Playwright: home → menu → customize → summary → pay → thank you"]
     U --> I --> E
+```
+
+### 10.1 Playwright: Page Object Model (POM)
+
+Every page of the site has one **page object** class. Tests never touch selectors
+directly; they talk to page objects in business language.
+
+```mermaid
+classDiagram
+    class BasePage {
+        +page: Page
+        +base_url: str
+        +open()
+        +heading()
+    }
+    class HomePage { +welcome_text() +go_to_menu() MenuPage }
+    class MenuPage { +coffee_names() +choose(coffee) CustomizePage }
+    class CustomizePage { +add_flavour(name) +choose_service(type) +set_quantity(n) +live_price() +continue_to_summary() SummaryPage }
+    class SummaryPage { +line_items() +total() +edit() CustomizePage +go_to_payment() PaymentPage }
+    class PaymentPage { +pay(name, card, expiry, cvc) ThankYouPage +error_message() }
+    class ThankYouPage { +thank_you_text() +order_number() }
+    BasePage <|-- HomePage
+    BasePage <|-- MenuPage
+    BasePage <|-- CustomizePage
+    BasePage <|-- SummaryPage
+    BasePage <|-- PaymentPage
+    BasePage <|-- ThankYouPage
+```
+
+**POM rules**
+- **Locators live only in page objects**, using `get_by_role` / `get_by_label` first,
+  and `data-testid` attributes when there is no accessible name.
+- **Actions that navigate return the next page object** (fluent flow), e.g.
+  `HomePage(page).open().go_to_menu().choose("Latte")`.
+- **No assertions inside page objects.** They return data; tests assert with
+  Playwright's `expect` or plain `assert`.
+- **Test data in one place** (`tests/e2e/data.py`: cards, customer names).
+- **Fixtures** (`tests/e2e/conftest.py`) seed the menu into the test DB and give each
+  test a fresh `home_page` object pointing at Django's `live_server`.
+
+Example test:
+
+```python
+def test_takeaway_order_with_flavours(home_page):
+    summary = (
+        home_page.open()
+        .go_to_menu()
+        .choose("Cappuccino")
+        .add_flavour("Vanilla")
+        .choose_service("Takeaway")
+        .set_quantity(2)
+        .continue_to_summary()
+    )
+    assert summary.total() == "€8.60"
+
+    thank_you = summary.go_to_payment().pay("Sara", APPROVED_CARD, "12/30", "123")
+    expect(thank_you.heading()).to_have_text("Thank you, Sara!")
+```
+
+E2E folder layout:
+
+```
+tests/e2e/
+├── conftest.py            # live_server, seeded menu, page-object fixtures
+├── data.py                # test cards, customer names
+├── pages/
+│   ├── base_page.py
+│   ├── home_page.py
+│   ├── menu_page.py
+│   ├── customize_page.py
+│   ├── summary_page.py
+│   ├── payment_page.py
+│   └── thank_you_page.py
+├── test_home_and_menu.py
+├── test_customize.py
+└── test_checkout.py
 ```
 
 Key Playwright scenarios:
