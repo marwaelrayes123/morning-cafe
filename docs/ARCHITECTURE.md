@@ -129,7 +129,7 @@ draft = (
     .add_flavour("caramel")
     .service("takeaway")
     .quantity(2)
-    .build()                       # -> OrderDraft, raises ValidationError if invalid
+    .build()  # -> OrderDraft, raises ValidationError if invalid
 )
 quote = pricing_for(draft.service).quote(draft)
 # quote.lines -> [("Cappuccino", 3.50), ("Vanilla", 0.50), ("Caramel", 0.50), ("Takeaway cup", 0.30)]

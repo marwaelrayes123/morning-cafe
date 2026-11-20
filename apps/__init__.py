@@ -1,0 +1,1 @@
+"""Morning Cafe Django apps."""
