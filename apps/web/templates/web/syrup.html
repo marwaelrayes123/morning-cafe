@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+{% load cafe %}
+
+{% block title %}Add a syrup · Morning Cafe{% endblock %}
+
+{% block content %}
+{% include "web/partials/steps.html" with current=3 %}
+
+<header class="page-header">
+  {% if variant.contains_milk %}
+    <a class="back-link" href="{% url 'web:order_milk' %}">← Change milk</a>
+  {% else %}
+    <a class="back-link" href="{% url 'web:coffee' variant.coffee.slug %}">← Back to {{ variant.coffee.name }}</a>
+  {% endif %}
+  <h1>Add a syrup to your {{ variant.name }}?</h1>
+  <p class="lead">A pump of flavour from our bottles, or keep it pure.</p>
+</header>
+
+<form method="post" class="shelf-grid">
+  {% csrf_token %}
+  {% for syrup in syrups %}
+    <button class="shelf-card{% if selected == syrup.slug %} is-selected{% endif %}" type="submit"
+            name="syrup" value="{{ syrup.slug }}">
+      <span class="shelf-card-art" aria-hidden="true">{% syrup_bottle syrup.name syrup.color %}</span>
+      <span class="option-title">{{ syrup.name }}</span>
+      <span class="price-tag">{{ syrup.price|money:"+" }}</span>
+    </button>
+  {% endfor %}
+  <button class="shelf-card shelf-card--none{% if selected == '' %} is-selected{% endif %}" type="submit"
+          name="syrup" value="">
+    <span class="shelf-card-art shelf-card-none" aria-hidden="true">✕</span>
+    <span class="option-title">No syrup</span>
+    <span class="price-tag">Included</span>
+  </button>
+</form>
+{% endblock %}

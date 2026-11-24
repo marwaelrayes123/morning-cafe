@@ -1,3 +1,5 @@
+import re
+
 from playwright.sync_api import Locator
 
 from .base_page import BasePage
@@ -14,6 +16,9 @@ class ReviewPage(BasePage):
 
     def total(self) -> Locator:
         return self.page.get_by_test_id("total")
+
+    def syrup_bottle(self) -> Locator:
+        return self.page.get_by_role("img", name=re.compile(r"syrup bottle$"))
 
     def agree_and_pay(self) -> PaymentPage:
         self.page.get_by_role("button", name="Agree & pay").click()

@@ -1,5 +1,5 @@
 {% extends "web/base.html" %}
-{% load cafe %}
+{% load static cafe %}
 
 {% block title %}Menu · Morning Cafe{% endblock %}
 
@@ -16,7 +16,7 @@
     {% for coffee in coffees %}
       <li>
         <a class="menu-card" href="{% url 'web:coffee' coffee.slug %}">
-          {% coffee_cup coffee.layers iced=coffee.is_iced label=coffee.name decorative=True %}
+          <img class="card-photo" src="{% static coffee.photo %}" alt="" loading="lazy">
           <span class="menu-card-body">
             <span class="menu-card-title">{{ coffee.name }}</span>
             <span class="menu-card-text">{{ coffee.description }}</span>

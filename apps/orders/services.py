@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.utils import timezone
 
-from apps.menu.models import CoffeeVariant, MilkOption, Size
+from apps.menu.models import CoffeeVariant, MilkOption, Size, Syrup
 from apps.menu.services import MenuService
 from apps.ordering.builder import DraftError, OrderBuilder
 from apps.ordering.draft import Choice, OrderDraft
@@ -25,6 +25,7 @@ class PricedDraft:
     quote: Quote
     variant: CoffeeVariant
     milk: MilkOption | None
+    syrup: Syrup | None
     size: Size
 
 
@@ -34,18 +35,32 @@ def _choice(item) -> Choice:
 
 class OrderService:
     @staticmethod
-    def prepare(variant_slug: str | None, milk_slug: str | None, size_slug: str | None) -> PricedDraft:
-        """Look up the selection on the menu, validate it with the builder and price it."""
+    def prepare(
+        variant_slug: str | None,
+        milk_slug: str | None,
+        size_slug: str | None,
+        syrup_slug: str | None = None,
+    ) -> PricedDraft:
+        """Look up the selection on the menu, validate it with the builder and price it.
+
+        `syrup_slug` None or "" means no syrup.
+        """
         variant = MenuService.variants().filter(slug=variant_slug).first()
         if variant is None:
             raise DraftError("Please choose a coffee first.")
         milk = MenuService.milks().filter(slug=milk_slug).first() if milk_slug else None
         if milk_slug and milk is None:
             raise DraftError("That milk is not available. Please choose another one.")
+        syrup = MenuService.syrups().filter(slug=syrup_slug).first() if syrup_slug else None
+        if syrup_slug and syrup is None:
+            raise DraftError("That syrup is not available. Please choose another one.")
         size = MenuService.sizes().filter(slug=size_slug).first() if size_slug else None
 
-        builder = OrderBuilder().variant(_choice(variant), contains_milk=variant.contains_milk)
+        builder = OrderBuilder().variant(
+            _choice(variant), contains_milk=variant.contains_milk, allows_syrup=variant.allows_syrup
+        )
         builder.milk(_choice(milk) if milk else None)
+        builder.syrup(_choice(syrup) if syrup else None)
         if size is not None:
             builder.size(_choice(size))
         draft = builder.build()
@@ -55,6 +70,7 @@ class OrderService:
             quote=get_pricing().quote(draft),
             variant=variant,
             milk=milk,
+            syrup=syrup,
             size=size,
         )
 
@@ -69,15 +85,16 @@ class OrderService:
             coffee_name=variant.coffee.name,
             variant_name=draft.variant.name,
             milk_name=draft.milk.name if draft.milk else "",
+            syrup_name=draft.syrup.name if draft.syrup else "",
             size_name=draft.size.name,
             variant_price=draft.variant.price,
             milk_price=draft.milk.price if draft.milk else 0,
+            syrup_price=draft.syrup.price if draft.syrup else 0,
             size_price=draft.size.price,
             total=priced.quote.total,
             picture={
-                "layers": variant.layers,
-                "iced": variant.is_iced,
-                "milk_color": priced.milk.color if priced.milk else None,
+                "image": variant.photo,
+                "syrup_color": priced.syrup.color if priced.syrup else None,
             },
         )
 

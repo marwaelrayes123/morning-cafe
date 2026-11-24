@@ -2,7 +2,7 @@
 
 from django.db.models import Min, Prefetch, Q, QuerySet
 
-from .models import Coffee, CoffeeVariant, MilkOption, Size
+from .models import Coffee, CoffeeVariant, MilkOption, Size, Syrup
 
 
 class MenuService:
@@ -33,6 +33,10 @@ class MenuService:
     @staticmethod
     def milks() -> QuerySet[MilkOption]:
         return MilkOption.objects.filter(is_available=True)
+
+    @staticmethod
+    def syrups() -> QuerySet[Syrup]:
+        return Syrup.objects.filter(is_available=True)
 
     @staticmethod
     def sizes() -> QuerySet[Size]:

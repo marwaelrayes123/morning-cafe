@@ -9,6 +9,7 @@ class OrderAdmin(admin.ModelAdmin):
         "number",
         "variant_name",
         "milk_name",
+        "syrup_name",
         "size_name",
         "total",
         "status",

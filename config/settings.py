@@ -175,7 +175,7 @@ REST_FRAMEWORK = {
 
 # --- Morning Cafe business settings -----------------------------------------
 
-CAFE_CURRENCY = env("CAFE_CURRENCY", "EUR")
+CAFE_CURRENCY = env("CAFE_CURRENCY", "DKK")
 TAKEAWAY_CUP_FEE = Decimal(env("TAKEAWAY_CUP_FEE", "0.30"))
 MAX_FLAVOURS_PER_DRINK = 3
 MAX_QUANTITY_PER_ORDER = 10

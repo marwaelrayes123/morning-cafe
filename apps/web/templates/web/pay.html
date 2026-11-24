@@ -1,5 +1,5 @@
 {% extends "web/base.html" %}
-{% load cafe %}
+{% load static cafe %}
 
 {% block title %}Pay · Morning Cafe{% endblock %}
 
@@ -8,8 +8,13 @@
 
 <section class="pay">
   <div class="pay-summary">
-    {% coffee_cup order.picture.layers iced=order.picture.iced milk_color=order.picture.milk_color label=order.variant_name %}
-    <p class="pay-item">{{ order.variant_name }}{% if order.milk_name %} · {{ order.milk_name }}{% endif %} · {{ order.size_name }}</p>
+    <div class="photo-stack">
+      <img class="pay-photo" src="{% static order.photo %}" alt="{{ order.variant_name }}">
+      {% if order.syrup_name %}{% syrup_bottle order.syrup_name order.syrup_color "bottle-overlay bottle-overlay--small" %}{% endif %}
+    </div>
+    <p class="pay-item">
+      {{ order.variant_name }}{% if order.milk_name %} · {{ order.milk_name }}{% endif %}{% if order.syrup_name %} · {{ order.syrup_name }} syrup{% endif %} · {{ order.size_name }}
+    </p>
     <p class="pay-total">{{ order.total|money }}</p>
   </div>
 

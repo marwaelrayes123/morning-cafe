@@ -28,12 +28,14 @@ class PricingStrategy(Protocol):
 
 
 class StandardPricing:
-    """Coffee price + milk price (if any) + size price."""
+    """Coffee price + milk (if any) + syrup (if any) + size."""
 
     def quote(self, draft: OrderDraft) -> Quote:
         lines = [QuoteLine(draft.variant.name, draft.variant.price)]
         if draft.milk is not None:
             lines.append(QuoteLine(draft.milk.name, draft.milk.price))
+        if draft.syrup is not None:
+            lines.append(QuoteLine(f"{draft.syrup.name} syrup", draft.syrup.price))
         lines.append(QuoteLine(f"Size: {draft.size.name}", draft.size.price))
         return Quote(tuple(lines))
 

@@ -1,0 +1,41 @@
+<svg class="syrup-bottle {{ css_class }}" viewBox="0 0 80 200" role="img" aria-label="{{ name }} syrup bottle">
+  <defs>
+    <linearGradient id="{{ uid }}-liquid" x1="0" x2="1">
+      <stop offset="0" stop-color="{{ dark }}"/>
+      <stop offset=".45" stop-color="{{ color }}"/>
+      <stop offset=".7" stop-color="{{ light }}"/>
+      <stop offset="1" stop-color="{{ dark }}"/>
+    </linearGradient>
+    <clipPath id="{{ uid }}-body">
+      <path d="M31 32 H49 V50 C49 60 66 64 66 78 V186 Q66 196 56 196 H24 Q14 196 14 186 V78 C14 64 31 60 31 50 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- Pump -->
+  <path d="M37 3 H20 a3 3 0 0 0 0 6 H37 Z" fill="#2b2b2b"/>
+  <rect x="35" y="0" width="10" height="12" rx="2" fill="#2b2b2b"/>
+  <rect x="27" y="11" width="26" height="14" rx="3" fill="#3a3a3a"/>
+  <rect x="30" y="24" width="20" height="9" rx="2" fill="#5a5a5a"/>
+
+  <!-- Glass and syrup -->
+  <path d="M31 32 H49 V50 C49 60 66 64 66 78 V186 Q66 196 56 196 H24 Q14 196 14 186 V78 C14 64 31 60 31 50 Z"
+        fill="#ffffff" fill-opacity=".4"/>
+  <g clip-path="url(#{{ uid }}-body)">
+    <rect x="0" y="66" width="80" height="140" fill="url(#{{ uid }}-liquid)"/>
+    <ellipse cx="40" cy="66" rx="30" ry="2.5" fill="{{ light }}" opacity=".8"/>
+  </g>
+  <path d="M31 32 H49 V50 C49 60 66 64 66 78 V186 Q66 196 56 196 H24 Q14 196 14 186 V78 C14 64 31 60 31 50 Z"
+        fill="none" stroke="#000" stroke-opacity=".18" stroke-width="1.5"/>
+  <rect x="19" y="80" width="4.5" height="100" rx="2.2" fill="#fff" opacity=".4"/>
+
+  <!-- Label -->
+  <rect x="18" y="100" width="44" height="62" rx="5" fill="#fffaf2" stroke="{{ dark }}" stroke-width="1.5"/>
+  <text x="40" y="112" text-anchor="middle" font-family="Georgia, serif" font-size="4.4" fill="#8a6a55"
+        textLength="34" lengthAdjust="spacingAndGlyphs">MORNING CAFE</text>
+  <line x1="26" y1="116" x2="54" y2="116" stroke="{{ color }}" stroke-width="1"/>
+  <text x="40" y="133" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="700"
+        fill="#3b2418" textLength="{{ label_length }}" lengthAdjust="spacingAndGlyphs">{{ label }}</text>
+  <text x="40" y="145" text-anchor="middle" font-family="Georgia, serif" font-size="5.5" letter-spacing="2"
+        fill="{{ dark }}">SYRUP</text>
+  <circle cx="40" cy="154" r="2.6" fill="{{ color }}"/>
+</svg>

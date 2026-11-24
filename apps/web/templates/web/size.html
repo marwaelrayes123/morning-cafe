@@ -7,25 +7,27 @@
 {% include "web/partials/steps.html" with current=3 %}
 
 <header class="page-header">
-  {% if variant.contains_milk %}
+  {% if variant.allows_syrup %}
+    <a class="back-link" href="{% url 'web:order_syrup' %}">← Change syrup</a>
+  {% elif variant.contains_milk %}
     <a class="back-link" href="{% url 'web:order_milk' %}">← Change milk</a>
   {% else %}
     <a class="back-link" href="{% url 'web:coffee' variant.coffee.slug %}">← Back to {{ variant.coffee.name }}</a>
   {% endif %}
   <h1>What size {{ variant.name }}?</h1>
-  <p class="lead">{% if milk %}With {{ milk.name|lower }}. {% endif %}Pick the cup that fits your morning.</p>
+  <p class="lead">
+    {% if milk or syrup %}With {% if milk %}{{ milk.name|lower }}{% endif %}{% if milk and syrup %} and {% endif %}{% if syrup %}{{ syrup.name|lower }} syrup{% endif %}. {% endif %}Pick the cup that fits your morning.
+  </p>
 </header>
 
-<form method="post" class="card-grid card-grid--small size-grid">
+<form method="post" class="shelf-grid shelf-grid--sizes">
   {% csrf_token %}
   {% for size in sizes %}
-    <button class="option-card size-{{ forloop.counter }}" type="submit" name="size" value="{{ size.slug }}">
-      {% coffee_cup variant.layers iced=variant.is_iced milk_color=milk.color label=size.name decorative=True %}
+    <button class="shelf-card size-card" type="submit" name="size" value="{{ size.slug }}">
+      <span class="shelf-card-art size-art" aria-hidden="true">{% size_cup forloop.counter %}</span>
       <span class="option-title">{{ size.name }}</span>
       <span class="option-text">{{ size.volume_ml }} ml</span>
-      <span class="option-meta">
-        <span class="price-tag">{% if size.price %}+ {{ size.price|money }}{% else %}Included{% endif %}</span>
-      </span>
+      <span class="price-tag">{% if size.price %}{{ size.price|money:"+" }}{% else %}Included{% endif %}</span>
     </button>
   {% endfor %}
 </form>

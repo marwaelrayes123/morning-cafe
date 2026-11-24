@@ -1,9 +1,12 @@
-"""Template helpers: `{% coffee_cup %}` draws a drink as a glass with its layers; `|money` formats prices.
+"""Template helpers: prices and syrup bottles.
 
 Usage:
     {% load cafe %}
-    {% coffee_cup variant.layers iced=variant.is_iced milk_color=milk.color %}
-    {{ variant.price|money }}
+    {{ variant.price|money }}        -> "52 kr."   (DKK)
+    {{ variant.price|money:"+" }}    -> "+ 6 kr."
+    {% syrup_bottle syrup.name syrup.color %}
+    {% milk_carton milk.name milk.color milk.is_plant_based %}
+    {% size_cup forloop.counter %}
 """
 
 import secrets
@@ -14,51 +17,73 @@ from django.conf import settings
 
 register = template.Library()
 
-CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£", "DKK": "kr "}
 
-# Inside of the glass in SVG units (viewBox 0 0 160 170).
-FILL_TOP = 42
-FILL_BOTTOM = 150
+def format_money(value: Decimal, currency: str) -> str:
+    """Danish kroner the Danish way ("52 kr.", "52,50 kr."); other currencies as "€3.90"."""
+    value = Decimal(value)
+    if currency == "DKK":
+        # Whole kroner without decimals ("52 kr."), otherwise with øre ("52,50 kr.").
+        amount = f"{value:,.0f}" if value == value.to_integral_value() else f"{value:,.2f}"
+        # Danish style: "." for thousands and "," for decimals.
+        amount = amount.replace(",", "§").replace(".", ",").replace("§", ".")
+        return f"{amount} kr."
+    symbols = {"EUR": "€", "USD": "$", "GBP": "£"}
+    return f"{symbols.get(currency, currency + ' ')}{value:,.2f}"
 
 
 @register.filter
-def money(value) -> str:
-    """Decimal("3.9") -> "€3.90"."""
+def money(value, sign: str = "") -> str:
     if value in (None, ""):
         return ""
-    symbol = CURRENCY_SYMBOLS.get(settings.CAFE_CURRENCY, settings.CAFE_CURRENCY + " ")
-    return f"{symbol}{Decimal(value):.2f}"
+    text = format_money(value, settings.CAFE_CURRENCY)
+    return f"{sign} {text}" if sign else text
 
 
-@register.inclusion_tag("web/partials/cup.html")
-def coffee_cup(layers, iced=False, milk_color=None, label="", css_class="", legend=False, decorative=False):
-    """Draw a cup. `layers` go bottom to top; their `ratio` decides how tall each one is.
+def _shade(hex_color: str, factor: float) -> str:
+    """Darken (factor < 1) or lighten (factor > 1) a "#rrggbb" colour."""
+    hex_color = hex_color.lstrip("#")
+    r, g, b = (int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+    if factor < 1:
+        r, g, b = (round(c * factor) for c in (r, g, b))
+    else:
+        r, g, b = (round(c + (255 - c) * (factor - 1)) for c in (r, g, b))
+    return f"#{r:02x}{g:02x}{b:02x}"
 
-    Use `decorative=True` inside links/buttons whose text already names the drink, so screen
-    readers do not read the picture twice.
-    """
-    layers = layers or []
-    total_ratio = sum(float(layer.get("ratio", 1)) for layer in layers) or 1
-    fill_height = FILL_BOTTOM - FILL_TOP
 
-    shapes = []
-    y = FILL_BOTTOM
-    for layer in layers:
-        height = fill_height * float(layer.get("ratio", 1)) / total_ratio
-        y -= height
-        color = layer.get("color", "#4a2716")
-        if milk_color and layer.get("kind") == "milk":
-            color = milk_color
-        # +0.6 overlap hides hairline gaps between layers when the SVG is scaled.
-        shapes.append({**layer, "y": round(y, 1), "height": round(height + 0.6, 1), "color": color})
-
+@register.inclusion_tag("web/partials/syrup_bottle.html")
+def syrup_bottle(name: str, color: str, css_class: str = ""):
+    """A syrup bottle filled with `color`, with `name` on the label."""
+    label = name.upper()
     return {
-        "uid": "cup-" + secrets.token_hex(4),
-        "shapes": shapes,
-        "legend_items": list(reversed(shapes)),  # top layer first, like reading the glass
-        "iced": iced,
-        "label": label or "A cup of coffee",
+        "uid": "bottle-" + secrets.token_hex(4),
+        "name": name,
+        "label": label,
+        # Long names are squeezed to fit the label.
+        "label_length": min(38, round(len(label) * 5.8)),
+        "color": color,
+        "dark": _shade(color, 0.62),
+        "light": _shade(color, 1.35),
         "css_class": css_class,
-        "legend": legend,
-        "decorative": decorative,
     }
+
+
+@register.inclusion_tag("web/partials/milk_carton.html")
+def milk_carton(name: str, color: str, plant_based: bool = False, css_class: str = ""):
+    """A milk carton with a band in `color` and the milk's name, e.g. "OAT" for "Oat milk"."""
+    label = name.removesuffix(" milk").removesuffix(" Milk").upper()
+    return {
+        "uid": "carton-" + secrets.token_hex(4),
+        "name": name,
+        "label": label,
+        "label_length": min(40, round(len(label) * 6.2)),
+        "color": color,
+        "dark": _shade(color, 0.7),
+        "plant_based": plant_based,
+        "css_class": css_class,
+    }
+
+
+@register.inclusion_tag("web/partials/size_cup.html")
+def size_cup(step: int = 1, css_class: str = ""):
+    """A cafe cup drawn bigger for each size step (1 = small, 2 = medium, 3 = large)."""
+    return {"uid": "size-" + secrets.token_hex(4), "step": step, "css_class": css_class}

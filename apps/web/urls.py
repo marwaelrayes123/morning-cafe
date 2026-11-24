@@ -12,6 +12,7 @@ urlpatterns = [
     # Building the order
     path("order/start/", views.order_start, name="order_start"),
     path("order/milk/", views.order_milk, name="order_milk"),
+    path("order/syrup/", views.order_syrup, name="order_syrup"),
     path("order/size/", views.order_size, name="order_size"),
     path("order/review/", views.order_review, name="order_review"),
     # Paying and picking up

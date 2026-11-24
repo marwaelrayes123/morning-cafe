@@ -13,6 +13,7 @@ LATTE = Choice("caramel-latte", "Caramel Latte", Decimal("3.90"))
 ESPRESSO = Choice("doppio", "Doppio", Decimal("2.80"))
 OAT = Choice("oat-milk", "Oat milk", Decimal("0.50"))
 LARGE = Choice("large", "Large", Decimal("1.10"))
+VANILLA = Choice("vanilla", "Vanilla", Decimal("0.60"))
 SMALL = Choice("small", "Small", Decimal("0"))
 
 
@@ -55,6 +56,36 @@ def test_price_is_coffee_plus_milk_plus_size():
         ("Size: Large", Decimal("1.10")),
     ]
     assert quote.total == Decimal("5.50")
+
+
+def test_syrup_adds_its_own_price_line():
+    draft = (
+        OrderBuilder()
+        .variant(LATTE, contains_milk=True, allows_syrup=True)
+        .milk(OAT)
+        .syrup(VANILLA)
+        .size(LARGE)
+        .build()
+    )
+
+    quote = get_pricing().quote(draft)
+
+    assert [line.label for line in quote.lines] == [
+        "Caramel Latte",
+        "Oat milk",
+        "Vanilla syrup",
+        "Size: Large",
+    ]
+    assert quote.total == Decimal("6.10")
+
+
+def test_syrup_is_rejected_when_not_allowed():
+    builder = (
+        OrderBuilder().variant(ESPRESSO, contains_milk=False, allows_syrup=False).syrup(VANILLA).size(SMALL)
+    )
+
+    with pytest.raises(DraftError, match="without syrup"):
+        builder.build()
 
 
 def test_price_without_milk_has_no_milk_line():

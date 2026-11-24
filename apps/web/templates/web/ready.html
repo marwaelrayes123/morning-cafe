@@ -1,5 +1,5 @@
 {% extends "web/base.html" %}
-{% load cafe %}
+{% load static cafe %}
 
 {% block title %}Ready for pickup · Morning Cafe{% endblock %}
 
@@ -8,8 +8,9 @@
 
 <section class="ready">
   <div class="ready-art">
-    {% coffee_cup order.picture.layers iced=order.picture.iced milk_color=order.picture.milk_color label=order.variant_name css_class="cup-art--large" %}
+    <img class="ready-photo" src="{% static order.photo %}" alt="Your {{ order.variant_name }}">
     <span class="ready-check" aria-hidden="true">✓</span>
+    {% if order.syrup_name %}{% syrup_bottle order.syrup_name order.syrup_color "bottle-beside" %}{% endif %}
   </div>
 
   <h1>Your {{ order.variant_name }} is ready, {{ order.customer_name }}!</h1>

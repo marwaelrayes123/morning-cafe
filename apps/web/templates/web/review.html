@@ -1,5 +1,5 @@
 {% extends "web/base.html" %}
-{% load cafe %}
+{% load static cafe %}
 
 {% block title %}Your order · Morning Cafe{% endblock %}
 
@@ -7,7 +7,11 @@
 {% include "web/partials/steps.html" with current=4 %}
 
 <section class="review">
-  {% coffee_cup priced.variant.layers iced=priced.variant.is_iced milk_color=priced.milk.color label=priced.variant.name css_class="cup-art--large" legend=True %}
+  <figure class="choice-photo photo-stack">
+    <img src="{% static priced.variant.photo %}" alt="{{ priced.variant.name }}">
+    {% if priced.syrup %}{% syrup_bottle priced.syrup.name priced.syrup.color "bottle-overlay" %}{% endif %}
+    <figcaption>{{ priced.variant.ingredients|join:" · " }}{% if priced.syrup %} · {{ priced.syrup.name }} syrup{% endif %}</figcaption>
+  </figure>
 
   <div class="receipt">
     <h1>Here's your {{ priced.variant.name }}</h1>
@@ -18,7 +22,7 @@
         {% for line in priced.quote.lines %}
           <tr>
             <th scope="row">{{ line.label }}</th>
-            <td>{% if forloop.first %}{{ line.amount|money }}{% else %}+ {{ line.amount|money }}{% endif %}</td>
+            <td>{% if forloop.first %}{{ line.amount|money }}{% else %}{{ line.amount|money:"+" }}{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>

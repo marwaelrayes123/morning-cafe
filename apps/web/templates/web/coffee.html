@@ -1,30 +1,45 @@
 {% extends "web/base.html" %}
-{% load cafe %}
+{% load static cafe %}
 
 {% block title %}{{ coffee.name }} · Morning Cafe{% endblock %}
 
 {% block content %}
 {% include "web/partials/steps.html" with current=2 %}
 
-<header class="page-header">
-  <a class="back-link" href="{% url 'web:menu' %}">← All coffees</a>
-  <h1>{{ coffee.name }}</h1>
-  <p class="lead">{{ coffee.description }} Choose your favourite:</p>
+<a class="back-link" href="{% url 'web:menu' %}">← All coffees</a>
+
+<header class="type-banner">
+  <img src="{% static coffee.photo %}" alt="{{ coffee.name }}">
+  <div class="type-banner-text">
+    <h1>{{ coffee.name }}</h1>
+    <p class="lead">{{ coffee.description }} Choose your favourite:</p>
+  </div>
 </header>
 
-<ul class="card-grid">
+<ul class="card-grid card-grid--recipes">
   {% for variant in variants %}
     <li>
       <form method="post" action="{% url 'web:order_start' %}">
         {% csrf_token %}
-        <button class="option-card" type="submit" name="variant" value="{{ variant.slug }}">
-          {% coffee_cup variant.layers iced=variant.is_iced label=variant.name legend=True decorative=True %}
-          <span class="option-title">{{ variant.name }}</span>
-          <span class="option-text">{{ variant.description }}</span>
-          <span class="option-meta">
-            <span class="price-tag">{{ variant.price|money }}</span>
-            {% if variant.contains_milk %}<span class="badge">🥛 with milk</span>{% endif %}
-            {% if variant.is_iced %}<span class="badge">🧊 iced</span>{% endif %}
+        <button class="option-card recipe-card" type="submit" name="variant" value="{{ variant.slug }}">
+          <span class="card-body">
+            <span class="option-title">{{ variant.name }}</span>
+            <span class="option-text">{{ variant.description }}</span>
+
+            {# What's inside: one coloured segment per layer, bottom to top = left to right #}
+            <span class="recipe-strip" aria-hidden="true">
+              {% for layer in variant.layers %}
+                <span class="recipe-part" style="flex: {{ layer.ratio }}; background: {{ layer.color }}"></span>
+              {% endfor %}
+            </span>
+            <span class="ingredients">{{ variant.ingredients|join:" · " }}</span>
+
+            <span class="option-meta">
+              <span class="price-tag">{{ variant.price|money }}</span>
+              {% if variant.contains_milk %}<span class="badge">🥛 with milk</span>{% endif %}
+              {% if variant.allows_syrup %}<span class="badge">🍯 syrup optional</span>{% endif %}
+              {% if variant.is_iced %}<span class="badge">🧊 iced</span>{% endif %}
+            </span>
           </span>
         </button>
       </form>

@@ -8,12 +8,6 @@ class CoffeePage(BasePage):
         return self.page.locator(".option-title").all_inner_texts()
 
     def choose(self, variant: str):
-        """Returns MilkPage for coffees with milk, otherwise SizePage."""
-        from .milk_page import MilkPage
-        from .size_page import SizePage
-
+        """Returns MilkPage, SyrupPage or SizePage, depending on the drink."""
         self.page.get_by_role("button", name=starts_with(variant)).click()
-        self.page.wait_for_load_state()
-        if self.page.url.endswith("/order/milk/"):
-            return MilkPage(self.page, self.base_url)
-        return SizePage(self.page, self.base_url)
+        return self._next_order_step()

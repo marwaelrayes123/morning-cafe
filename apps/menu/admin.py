@@ -1,11 +1,11 @@
 from django.contrib import admin
 
-from .models import Coffee, CoffeeVariant, MilkOption, Size
+from .models import Coffee, CoffeeVariant, MilkOption, Size, Syrup
 
 
 class CoffeeVariantInline(admin.TabularInline):
     model = CoffeeVariant
-    fields = ("name", "slug", "price", "contains_milk", "is_iced", "sort_order", "is_available")
+    fields = ("name", "slug", "price", "contains_milk", "allows_syrup", "image", "sort_order", "is_available")
     extra = 0
 
 
@@ -19,13 +19,19 @@ class CoffeeAdmin(admin.ModelAdmin):
 
 @admin.register(CoffeeVariant)
 class CoffeeVariantAdmin(admin.ModelAdmin):
-    list_display = ("name", "coffee", "price", "contains_milk", "is_available")
+    list_display = ("name", "coffee", "price", "contains_milk", "allows_syrup", "is_available")
     list_filter = ("coffee", "contains_milk", "is_available")
     prepopulated_fields = {"slug": ("name",)}
 
 
 @admin.register(MilkOption)
 class MilkOptionAdmin(admin.ModelAdmin):
+    list_display = ("name", "price", "is_plant_based", "sort_order", "is_available")
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Syrup)
+class SyrupAdmin(admin.ModelAdmin):
     list_display = ("name", "price", "color", "sort_order", "is_available")
     prepopulated_fields = {"slug": ("name",)}
 

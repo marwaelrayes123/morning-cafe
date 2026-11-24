@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from apps.menu.models import CoffeeVariant
+from apps.menu.models import DEFAULT_PHOTO, CoffeeVariant
 
 
 class Order(models.Model):
@@ -23,14 +23,16 @@ class Order(models.Model):
     coffee_name = models.CharField(max_length=60)
     variant_name = models.CharField(max_length=60)
     milk_name = models.CharField(max_length=60, blank=True)
+    syrup_name = models.CharField(max_length=60, blank=True)
     size_name = models.CharField(max_length=30)
 
     variant_price = models.DecimalField(max_digits=6, decimal_places=2)
     milk_price = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    syrup_price = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     size_price = models.DecimalField(max_digits=6, decimal_places=2)
     total = models.DecimalField(max_digits=7, decimal_places=2)
 
-    # How the drink looks, for the pictures: {"layers": [...], "iced": bool, "milk_color": "#..."}
+    # How the drink looks: {"image": "web/img/coffee/...jpg", "syrup_color": "#..." or None}
     picture = models.JSONField(default=dict, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -41,6 +43,14 @@ class Order(models.Model):
 
     def __str__(self) -> str:
         return f"{self.number} · {self.variant_name}"
+
+    @property
+    def photo(self) -> str:
+        return self.picture.get("image") or DEFAULT_PHOTO
+
+    @property
+    def syrup_color(self) -> str | None:
+        return self.picture.get("syrup_color")
 
     @property
     def is_paid(self) -> bool:
@@ -66,5 +76,7 @@ class Order(models.Model):
         lines = [(self.variant_name, self.variant_price)]
         if self.milk_name:
             lines.append((self.milk_name, self.milk_price))
+        if self.syrup_name:
+            lines.append((f"{self.syrup_name} syrup", self.syrup_price))
         lines.append((f"Size: {self.size_name}", self.size_price))
         return lines

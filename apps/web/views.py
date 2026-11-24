@@ -28,7 +28,7 @@ def home(request):
     """Welcome page: short intro and a button to the menu."""
     steps = [
         ("☕", "Pick a coffee", "Choose your favourite and how you like it."),
-        ("🥛", "Make it yours", "Pick your milk and the size of your cup."),
+        ("🥛", "Make it yours", "Pick your milk, a syrup and the size of your cup."),
         ("💳", "Pay (pretend)", "Check out with a fake card. No real money."),
     ]
     return render(request, "web/home.html", {"steps": steps})
@@ -49,25 +49,42 @@ def coffee_detail(request, slug):
 
 
 # --- Building the order (kept in the session) --------------------------------
+# Order of steps: variant -> milk (if it contains milk) -> syrup (if allowed) -> size -> review.
+
+
+def _next_step(variant, selection) -> str:
+    """The first step the customer still has to do."""
+    if variant.contains_milk and not selection.milk:
+        return "web:order_milk"
+    if variant.allows_syrup and selection.syrup is None:
+        return "web:order_syrup"
+    if not selection.size:
+        return "web:order_size"
+    return "web:order_review"
+
+
+def _current_variant(selection):
+    return MenuService.variants().filter(slug=selection.variant).first()
 
 
 @require_POST
 def order_start(request):
-    """A variant was chosen: start a new draft, then ask for milk (if needed) or size."""
+    """A variant was chosen: start a new draft and go to the next step."""
     variant = get_object_or_404(MenuService.variants(), slug=request.POST.get("variant"))
-    DraftSession(request.session).start(variant.slug)
-    return redirect("web:order_milk" if variant.contains_milk else "web:order_size")
+    draft = DraftSession(request.session)
+    draft.start(variant.slug)
+    return redirect(_next_step(variant, draft.get()))
 
 
 @require_http_methods(["GET", "POST"])
 def order_milk(request):
     """Step 3a: type of milk (only for coffees that contain milk)."""
     draft = DraftSession(request.session)
-    variant = MenuService.variants().filter(slug=draft.get().variant).first()
+    variant = _current_variant(draft.get())
     if variant is None:
         return _restart(request, "Please choose a coffee first.")
     if not variant.contains_milk:
-        return redirect("web:order_size")
+        return redirect(_next_step(variant, draft.get()))
 
     if request.method == "POST":
         milk = MenuService.milks().filter(slug=request.POST.get("milk")).first()
@@ -75,21 +92,47 @@ def order_milk(request):
             messages.error(request, "Please choose a type of milk.")
             return redirect("web:order_milk")
         draft.set_milk(milk.slug)
-        return redirect("web:order_size")
+        return redirect(_next_step(variant, draft.get()))
 
     return render(request, "web/milk.html", {"variant": variant, "milks": MenuService.milks()})
 
 
 @require_http_methods(["GET", "POST"])
-def order_size(request):
-    """Step 3b: cup size."""
+def order_syrup(request):
+    """Step 3b: optional flavour syrup."""
     draft = DraftSession(request.session)
     selection = draft.get()
-    variant = MenuService.variants().filter(slug=selection.variant).first()
+    variant = _current_variant(selection)
     if variant is None:
         return _restart(request, "Please choose a coffee first.")
+    if not variant.allows_syrup:
+        return redirect(_next_step(variant, selection))
     if variant.contains_milk and not selection.milk:
         return redirect("web:order_milk")
+
+    if request.method == "POST":
+        slug = request.POST.get("syrup", "")
+        if slug and not MenuService.syrups().filter(slug=slug).exists():
+            messages.error(request, "Please choose a syrup.")
+            return redirect("web:order_syrup")
+        draft.set_syrup(slug)  # "" means no syrup
+        return redirect(_next_step(variant, draft.get()))
+
+    context = {"variant": variant, "syrups": MenuService.syrups(), "selected": selection.syrup}
+    return render(request, "web/syrup.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+def order_size(request):
+    """Step 3c: cup size."""
+    draft = DraftSession(request.session)
+    selection = draft.get()
+    variant = _current_variant(selection)
+    if variant is None:
+        return _restart(request, "Please choose a coffee first.")
+    previous = _next_step(variant, selection)
+    if previous in ("web:order_milk", "web:order_syrup"):
+        return redirect(previous)
 
     if request.method == "POST":
         size = MenuService.sizes().filter(slug=request.POST.get("size")).first()
@@ -99,8 +142,13 @@ def order_size(request):
         draft.set_size(size.slug)
         return redirect("web:order_review")
 
-    milk = MenuService.milks().filter(slug=selection.milk).first()
-    return render(request, "web/size.html", {"variant": variant, "milk": milk, "sizes": MenuService.sizes()})
+    context = {
+        "variant": variant,
+        "milk": MenuService.milks().filter(slug=selection.milk).first(),
+        "syrup": MenuService.syrups().filter(slug=selection.syrup).first() if selection.syrup else None,
+        "sizes": MenuService.sizes(),
+    }
+    return render(request, "web/size.html", context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -109,7 +157,7 @@ def order_review(request):
     draft = DraftSession(request.session)
     selection = draft.get()
     try:
-        priced = OrderService.prepare(selection.variant, selection.milk, selection.size)
+        priced = OrderService.prepare(selection.variant, selection.milk, selection.size, selection.syrup)
     except DraftError as error:
         return _restart(request, str(error))
 
@@ -167,7 +215,6 @@ def order_preparing(request, number):
         "prep_seconds": total,
         "remaining": order.seconds_until_ready(),
         "elapsed": total - order.seconds_until_ready(),
-        "stage_length": round(stage_length, 2),
         "stages": stages,
     }
     return render(request, "web/preparing.html", context)

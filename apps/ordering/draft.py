@@ -28,3 +28,4 @@ class OrderDraft:
     variant: Choice
     size: Choice
     milk: Choice | None = None
+    syrup: Choice | None = None

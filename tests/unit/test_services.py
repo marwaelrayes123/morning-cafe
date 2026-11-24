@@ -21,7 +21,8 @@ def test_seed_is_idempotent(menu):
     seed_menu()
 
     assert MenuService.coffees().count() == 7
-    assert CoffeeVariant.objects.count() == 21
+    assert CoffeeVariant.objects.count() == 20
+    assert MenuService.syrups().count() == 5
     assert MenuService.milks().count() == 6
     assert MenuService.sizes().count() == 3
 
@@ -29,7 +30,7 @@ def test_seed_is_idempotent(menu):
 def test_coffees_have_a_from_price(menu):
     latte = MenuService.coffees().get(slug="latte")
 
-    assert latte.from_price == Decimal("3.60")
+    assert latte.from_price == Decimal("48.00")
 
 
 def test_unavailable_variants_are_hidden(menu):
@@ -39,15 +40,33 @@ def test_unavailable_variants_are_hidden(menu):
 
 
 def test_prepare_prices_a_milk_coffee(menu):
-    priced = OrderService.prepare("caramel-latte", "oat-milk", "large")
+    priced = OrderService.prepare("classic-latte", "oat-milk", "large", "caramel")
 
-    assert priced.quote.total == Decimal("5.50")  # 3.90 + 0.50 + 1.10
-    assert priced.milk.name == "Oat milk"
+    assert priced.quote.total == Decimal("73.00")  # 48 + 6 + 5 + 14 kr.
+    assert [line.label for line in priced.quote.lines] == [
+        "Classic Latte",
+        "Oat milk",
+        "Caramel syrup",
+        "Size: Large",
+    ]
+
+
+def test_prepare_rejects_syrup_in_an_espresso(menu):
+    with pytest.raises(DraftError, match="without syrup"):
+        OrderService.prepare("doppio", None, "small", "vanilla")
+
+
+def test_order_remembers_the_syrup_bottle(menu):
+    order = OrderService.place_order(OrderService.prepare("classic-latte", "oat-milk", "small", "lavender"))
+
+    assert (order.syrup_name, order.syrup_price) == ("Lavender", Decimal("5.00"))
+    assert order.syrup_color == "#8e6cc0"
+    assert ("Lavender syrup", Decimal("5.00")) in order.price_lines
 
 
 def test_prepare_requires_milk_for_milk_coffee(menu):
     with pytest.raises(DraftError, match="milk"):
-        OrderService.prepare("caramel-latte", None, "large")
+        OrderService.prepare("classic-latte", None, "large")
 
 
 def test_prepare_rejects_unknown_coffee(menu):
@@ -61,8 +80,8 @@ def test_place_order_copies_names_and_prices(menu):
     assert order.status == Order.Status.PENDING
     assert order.number.startswith("MC-")
     assert (order.variant_name, order.milk_name, order.size_name) == ("Doppio", "", "Medium")
-    assert order.total == Decimal("3.40")  # 2.80 + 0.60
-    assert order.picture["layers"]
+    assert order.total == Decimal("46.00")  # 38 + 8 kr.
+    assert order.photo == "web/img/coffee/espresso.jpg"  # standard espresso-cup photo
 
 
 def test_approved_payment_marks_order_paid(menu):

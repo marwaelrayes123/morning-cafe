@@ -1,91 +1,105 @@
 """Starter menu. Used by `python manage.py seed_menu` and by the tests.
 
 Running it again updates existing rows (matched by slug) instead of duplicating them.
+Prices are in Danish kroner.
 """
 
 from decimal import Decimal
 
 from django.db import transaction
 
-from .models import Coffee, CoffeeVariant, MilkOption, Size
+from .models import Coffee, CoffeeVariant, MilkOption, Size, Syrup
 
-# --- Layer building blocks (bottom to top in the glass) ----------------------
+# --- Layer building blocks (what is in the cup, bottom to top) ---------------
 
 
 def layer(label: str, color: str, ratio: float, kind: str = "coffee") -> dict:
     return {"label": label, "color": color, "ratio": ratio, "kind": kind}
 
 
-ESPRESSO = "#4a2716"
-CREMA = "#b5763e"
-WATER = "#7a4a2a"
-MILK = "#fbf4e8"
-FOAM = "#fffdf8"
+ESPRESSO = layer("Espresso", "#4a2716", 1)
+CREMA = layer("Crema", "#b5763e", 0.3)
+WATER = layer("Hot water", "#7a4a2a", 3, "water")
+MILK = layer("Steamed milk", "#fbf4e8", 2, "milk")
+COLD_MILK = layer("Cold milk", "#fbf4e8", 2, "milk")
+FOAM = layer("Milk foam", "#fffdf8", 1, "foam")
+ICE = layer("Ice", "#e8f1f5", 1, "ice")
+CHOCOLATE = layer("Chocolate", "#5b3320", 0.8)
+WHITE_CHOCOLATE = layer("White chocolate", "#efe0c6", 0.8)
+CREAM = layer("Whipped cream", "#fff8ee", 0.7, "cream")
+CINNAMON = layer("Cinnamon", "#a0592b", 0.15, "topping")
+COLD_BREW = layer("Cold brew", "#3b2012", 3)
 
 
-def espresso(r=1.0):
-    return layer("Espresso", ESPRESSO, r)
-
-
-def crema(r=0.3):
-    return layer("Crema", CREMA, r)
-
-
-def milk(r=1.0):
-    return layer("Steamed milk", MILK, r, "milk")
-
-
-def foam(r=1.0):
-    return layer("Milk foam", FOAM, r, "foam")
-
-
-def syrup(label, color, r=0.4):
-    return layer(label, color, r, "syrup")
+def variant(name, description, price, *, milk=False, syrup=True, layers=()):
+    return {
+        "name": name,
+        "description": description,
+        "price": price,
+        "contains_milk": milk,
+        "allows_syrup": syrup,
+        "layers": list(layers),
+    }
 
 
 # --- Menu ----------------------------------------------------------------------
+# Each coffee type has one standard photo (static/web/img/coffee/<slug>.jpg) in its cup:
+#   espresso cup: Espresso · americano cup: Americano
+#   mug: Cappuccino, Flat White, Mocha · glass with handle: Latte, Iced Coffee
 
 COFFEES = [
     {
         "name": "Espresso",
-        "description": "Short, strong and intense. The heart of every coffee.",
+        "description": "Short, strong and intense. Served in a small espresso cup.",
         "variants": [
-            ("Single Espresso", "One rich shot with golden crema.", "2.20", False, [espresso(2), crema(0.4)]),
-            ("Doppio", "A double shot for a double wake-up.", "2.80", False, [espresso(3), crema(0.5)]),
-            (
+            variant(
+                "Single Espresso",
+                "One rich shot with golden crema.",
+                "32",
+                syrup=False,
+                layers=[ESPRESSO, CREMA],
+            ),
+            variant(
+                "Doppio",
+                "A double shot for a double wake-up.",
+                "38",
+                syrup=False,
+                layers=[ESPRESSO, ESPRESSO, CREMA],
+            ),
+            variant(
                 "Ristretto",
                 "A shorter, sweeter, more concentrated shot.",
-                "2.40",
-                False,
-                [espresso(1.4), crema(0.4)],
+                "34",
+                syrup=False,
+                layers=[ESPRESSO, CREMA],
             ),
-            ("Macchiato", "Espresso marked with a spoon of milk foam.", "2.90", True, [espresso(2), foam(1)]),
+            variant(
+                "Macchiato",
+                "Espresso marked with a spoon of milk foam.",
+                "38",
+                milk=True,
+                syrup=False,
+                layers=[ESPRESSO, FOAM],
+            ),
         ],
     },
     {
         "name": "Americano",
         "description": "Espresso topped up with hot water. Smooth and long.",
         "variants": [
-            (
-                "Classic Americano",
-                "Espresso with hot water.",
-                "2.80",
-                False,
-                [espresso(1.5), layer("Hot water", WATER, 3, "water"), crema(0.3)],
-            ),
-            (
+            variant("Classic Americano", "Espresso with hot water.", "38", layers=[ESPRESSO, WATER, CREMA]),
+            variant(
                 "Long Black",
                 "Water first, espresso on top. Keeps the crema.",
-                "2.90",
-                False,
-                [layer("Hot water", WATER, 2.5, "water"), espresso(1.6), crema(0.4)],
+                "40",
+                layers=[WATER, ESPRESSO, CREMA],
             ),
-            (
+            variant(
                 "Americano with Milk",
                 "A splash of milk to soften it.",
-                "3.10",
-                True,
-                [espresso(1.5), layer("Hot water", WATER, 2.5, "water"), milk(1)],
+                "42",
+                milk=True,
+                layers=[ESPRESSO, WATER, MILK],
             ),
         ],
     },
@@ -93,48 +107,39 @@ COFFEES = [
         "name": "Cappuccino",
         "description": "Equal parts espresso, steamed milk and silky foam.",
         "variants": [
-            ("Classic Cappuccino", "The balanced classic.", "3.40", True, [espresso(1), milk(1), foam(1.2)]),
-            (
-                "Dry Cappuccino",
-                "Less milk, more airy foam.",
-                "3.40",
-                True,
-                [espresso(1), milk(0.5), foam(1.8)],
+            variant(
+                "Classic Cappuccino", "The balanced classic.", "45", milk=True, layers=[ESPRESSO, MILK, FOAM]
             ),
-            (
+            variant("Dry Cappuccino", "Less milk, more airy foam.", "45", milk=True, layers=[ESPRESSO, FOAM]),
+            variant(
                 "Cinnamon Cappuccino",
                 "Dusted with warm cinnamon.",
-                "3.70",
-                True,
-                [espresso(1), milk(1), foam(1.1), layer("Cinnamon", "#a0592b", 0.15, "topping")],
+                "48",
+                milk=True,
+                layers=[ESPRESSO, MILK, FOAM, CINNAMON],
             ),
         ],
     },
     {
         "name": "Latte",
-        "description": "Espresso with lots of creamy steamed milk.",
+        "description": "Espresso with lots of creamy steamed milk, served in a glass.",
         "variants": [
-            ("Classic Latte", "Mellow, milky and smooth.", "3.60", True, [espresso(1), milk(3), foam(0.5)]),
-            (
-                "Vanilla Latte",
-                "With sweet vanilla syrup.",
-                "3.90",
-                True,
-                [syrup("Vanilla syrup", "#f1d98f"), espresso(1), milk(2.6), foam(0.5)],
+            variant(
+                "Classic Latte", "Mellow, milky and smooth.", "48", milk=True, layers=[ESPRESSO, MILK, FOAM]
             ),
-            (
-                "Caramel Latte",
-                "With buttery caramel syrup.",
-                "3.90",
-                True,
-                [syrup("Caramel syrup", "#c98a3c"), espresso(1), milk(2.6), foam(0.5)],
+            variant(
+                "Latte Macchiato",
+                "Milk first, espresso poured through it in layers.",
+                "50",
+                milk=True,
+                layers=[MILK, ESPRESSO, FOAM],
             ),
-            (
-                "Hazelnut Latte",
-                "With toasty hazelnut syrup.",
-                "3.90",
-                True,
-                [syrup("Hazelnut syrup", "#9c6a3a"), espresso(1), milk(2.6), foam(0.5)],
+            variant(
+                "Double Shot Latte",
+                "Two shots for a stronger latte.",
+                "54",
+                milk=True,
+                layers=[ESPRESSO, ESPRESSO, MILK, FOAM],
             ),
         ],
     },
@@ -142,95 +147,98 @@ COFFEES = [
         "name": "Flat White",
         "description": "Strong espresso with a thin layer of velvety micro-foam.",
         "variants": [
-            (
+            variant(
                 "Classic Flat White",
                 "Two shots and silky milk.",
-                "3.50",
-                True,
-                [espresso(1.4), milk(1.6), foam(0.25)],
+                "48",
+                milk=True,
+                layers=[ESPRESSO, MILK, FOAM],
             ),
-            (
+            variant(
                 "Ristretto Flat White",
                 "Made with sweeter ristretto shots.",
-                "3.70",
-                True,
-                [espresso(1.2), crema(0.2), milk(1.6), foam(0.25)],
+                "50",
+                milk=True,
+                layers=[ESPRESSO, CREMA, MILK, FOAM],
             ),
         ],
     },
     {
         "name": "Mocha",
-        "description": "Espresso, chocolate and milk. Dessert in a cup.",
+        "description": "Espresso, chocolate and milk. Dessert in a mug.",
         "variants": [
-            (
+            variant(
                 "Classic Mocha",
                 "Dark chocolate and whipped cream.",
-                "4.00",
-                True,
-                [
-                    layer("Chocolate", "#5b3320", 0.8),
-                    espresso(1),
-                    milk(1.6),
-                    layer("Whipped cream", "#fff8ee", 0.7, "cream"),
-                ],
+                "52",
+                milk=True,
+                layers=[CHOCOLATE, ESPRESSO, MILK, CREAM],
             ),
-            (
+            variant(
                 "White Mocha",
                 "Creamy white chocolate.",
-                "4.20",
-                True,
-                [
-                    layer("White chocolate", "#efe0c6", 0.8),
-                    espresso(1),
-                    milk(1.6),
-                    layer("Whipped cream", "#fff8ee", 0.7, "cream"),
-                ],
+                "55",
+                milk=True,
+                layers=[WHITE_CHOCOLATE, ESPRESSO, MILK, CREAM],
             ),
         ],
     },
     {
         "name": "Iced Coffee",
-        "description": "Cold, refreshing and served over ice.",
+        "description": "Cold, refreshing and served over ice in a glass.",
         "is_iced": True,
         "variants": [
-            ("Iced Latte", "Espresso poured over cold milk and ice.", "3.90", True, [milk(2.5), espresso(1)]),
-            (
-                "Cold Brew",
-                "Steeped for 18 hours. Smooth, never bitter.",
-                "3.60",
-                False,
-                [layer("Cold brew", "#3b2012", 3.4)],
+            variant(
+                "Iced Latte",
+                "Espresso poured over cold milk and ice.",
+                "52",
+                milk=True,
+                layers=[ICE, COLD_MILK, ESPRESSO],
             ),
-            (
-                "Iced Caramel Macchiato",
-                "Caramel, cold milk and a shot on top.",
-                "4.30",
-                True,
-                [
-                    syrup("Caramel syrup", "#c98a3c"),
-                    milk(2.4),
-                    espresso(1),
-                    layer("Caramel drizzle", "#b06f2a", 0.15, "topping"),
-                ],
+            variant(
+                "Cold Brew", "Steeped for 18 hours. Smooth, never bitter.", "45", layers=[ICE, COLD_BREW]
+            ),
+            variant(
+                "Iced Macchiato",
+                "Cold milk and ice with a shot poured on top.",
+                "52",
+                milk=True,
+                layers=[ICE, COLD_MILK, ESPRESSO],
             ),
         ],
     },
 ]
 
+# Earlier versions of the menu had the syrup in the drink name. Syrup is now its own step.
+RETIRED_VARIANTS = ["vanilla-latte", "caramel-latte", "hazelnut-latte", "iced-caramel-macchiato"]
+
 MILKS = [
-    ("Whole milk", "0.00", "#fdf8ef"),
-    ("Semi-skimmed milk", "0.00", "#fbf9f4"),
-    ("Lactose-free milk", "0.30", "#fffaf0"),
-    ("Soy milk", "0.40", "#f5ecd6"),
-    ("Oat milk", "0.50", "#efe0c4"),
-    ("Almond milk", "0.50", "#f1e2cc"),
+    # name, extra price (kr.), carton colour, plant-based
+    ("Whole milk", "0", "#2f6db5", False),
+    ("Semi-skimmed milk", "0", "#5aa0d8", False),
+    ("Lactose-free milk", "3", "#7a5bb5", False),
+    ("Soy milk", "5", "#5f8f3e", True),
+    ("Oat milk", "6", "#c08b3e", True),
+    ("Almond milk", "6", "#9a5f3c", True),
+]
+
+SYRUPS = [
+    # name, extra price (kr.), bottle colour
+    ("Vanilla", "5", "#e2b443"),
+    ("Caramel", "5", "#b8641f"),
+    ("Hazelnut", "5", "#7a4a2a"),
+    ("Cinnamon", "5", "#a33b1c"),
+    ("Lavender", "5", "#8e6cc0"),
 ]
 
 SIZES = [
-    ("Small", 240, "0.00"),
-    ("Medium", 360, "0.60"),
-    ("Large", 480, "1.10"),
+    # name, volume (ml), extra price (kr.)
+    ("Small", 240, "0"),
+    ("Medium", 360, "8"),
+    ("Large", 480, "14"),
 ]
+
+PHOTO_DIR = "web/img/coffee"
 
 
 def _slug(name: str) -> str:
@@ -241,36 +249,48 @@ def _slug(name: str) -> str:
 def seed_menu() -> None:
     for coffee_order, data in enumerate(COFFEES):
         iced = data.get("is_iced", False)
-        first_layers = data["variants"][0][4]
         coffee, _ = Coffee.objects.update_or_create(
             slug=_slug(data["name"]),
             defaults={
                 "name": data["name"],
                 "description": data["description"],
-                "layers": first_layers,
+                "layers": data["variants"][0]["layers"],
                 "is_iced": iced,
+                "image": f"{PHOTO_DIR}/{_slug(data['name'])}.jpg",
                 "sort_order": coffee_order,
                 "is_available": True,
             },
         )
-        for variant_order, (name, description, price, has_milk, layers) in enumerate(data["variants"]):
+        for variant_order, item in enumerate(data["variants"]):
             CoffeeVariant.objects.update_or_create(
-                slug=_slug(name),
+                slug=_slug(item["name"]),
                 defaults={
+                    **item,
                     "coffee": coffee,
-                    "name": name,
-                    "description": description,
-                    "price": Decimal(price),
-                    "contains_milk": has_milk,
-                    "layers": layers,
+                    "price": Decimal(item["price"]),
                     "is_iced": iced,
+                    "image": "",  # use the coffee type's standard cup photo
                     "sort_order": variant_order,
                     "is_available": True,
                 },
             )
 
-    for order, (name, price, color) in enumerate(MILKS):
+    CoffeeVariant.objects.filter(slug__in=RETIRED_VARIANTS).delete()
+
+    for order, (name, price, color, plant_based) in enumerate(MILKS):
         MilkOption.objects.update_or_create(
+            slug=_slug(name),
+            defaults={
+                "name": name,
+                "price": Decimal(price),
+                "color": color,
+                "is_plant_based": plant_based,
+                "sort_order": order,
+            },
+        )
+
+    for order, (name, price, color) in enumerate(SYRUPS):
+        Syrup.objects.update_or_create(
             slug=_slug(name),
             defaults={"name": name, "price": Decimal(price), "color": color, "sort_order": order},
         )

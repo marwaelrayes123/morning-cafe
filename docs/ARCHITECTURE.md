@@ -6,16 +6,18 @@ pays with a **fake card**, and gets a thank-you page. No real money, no real car
 
 ## 1. Customer journey
 
-> **Revised in step 3:** the flow is now coffee → sub-category → milk → size → price → pay →
-> preparing → pickup. Flavours, dine-in/takeaway and quantity from the first draft are not built.
+> **Revised in step 3:** the flow is now coffee → sub-category → milk → syrup → size → price → pay →
+> preparing → pickup. Prices are in Danish kroner. Flavours, dine-in/takeaway and quantity from the first draft are not built.
 
 ```mermaid
 flowchart LR
     H[🏠 Home] --> M[☕ Menu<br/>coffee types]
     M --> V[✨ Type<br/>sub-category]
     V -->|contains milk| K[🥛 Milk]
-    V -->|no milk| Z[📏 Size]
-    K --> Z
+    V -->|no milk| Y
+    K --> Y[🍯 Syrup<br/>optional]
+    Y --> Z[📏 Size]
+    V -->|espresso| Z
     Z --> R[🧾 Price<br/>agree?]
     R -->|Agree & pay| P[💳 Pay<br/>fake card]
     R -->|change| V
@@ -29,8 +31,9 @@ flowchart LR
 | 1 | `/` | **Home** | Full-screen photo, welcome, "See our menu" |
 | 2 | `/menu/` | **Menu** | Coffee types with a picture and "from" price |
 | 3 | `/menu/<coffee>/` | **Type** | Sub-categories (e.g. Caramel Latte) with layered pictures and prices |
-| 4 | `/order/milk/` | **Milk** | Only for drinks with milk; the picture takes the milk's colour |
-| 5 | `/order/size/` | **Size** | Small / Medium / Large |
+| 4 | `/order/milk/` | **Milk** | Only for drinks with milk |
+| 5a | `/order/syrup/` | **Syrup** | Optional; bottles in the syrup colour with its name on the label (not for espresso) |
+| 5b | `/order/size/` | **Size** | Small / Medium / Large |
 | 6 | `/order/review/` | **Price** | Line-by-line price and total; "Agree & pay" places a pending `Order` |
 | 7 | `/order/<number>/pay/` | **Pay** | Name + fake card |
 | 8 | `/order/<number>/preparing/` | **Preparing** | Cup fills up for `COFFEE_PREP_SECONDS`, then moves on by itself |
@@ -38,8 +41,9 @@ flowchart LR
 
 The selection (steps 3–5) is kept in the browser session as slugs; prices are always
 read fresh from the menu. Data model: `Coffee` → `CoffeeVariant` (sub-category, price,
-`contains_milk`, picture `layers`), `MilkOption` (+price), `Size` (+price).
-Price = variant + milk + size (`StandardPricing`).
+`contains_milk`, picture `layers`), `MilkOption` (+price), `Syrup` (+price, bottle colour), `Size` (+price).
+Price = variant + milk + syrup + size (`StandardPricing`). Each coffee type has one standard
+cup photo (espresso cup, americano cup, mug, glass with handle).
 
 ## 2. Tech stack
 
