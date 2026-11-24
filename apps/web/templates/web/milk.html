@@ -1,0 +1,27 @@
+{% extends "web/base.html" %}
+{% load cafe %}
+
+{% block title %}Choose your milk · Morning Cafe{% endblock %}
+
+{% block content %}
+{% include "web/partials/steps.html" with current=3 %}
+
+<header class="page-header">
+  <a class="back-link" href="{% url 'web:coffee' variant.coffee.slug %}">← Back to {{ variant.coffee.name }}</a>
+  <h1>Which milk for your {{ variant.name }}?</h1>
+  <p class="lead">Every milk tastes a little different. Plant milks cost a bit extra.</p>
+</header>
+
+<form method="post" class="card-grid card-grid--small">
+  {% csrf_token %}
+  {% for milk in milks %}
+    <button class="option-card" type="submit" name="milk" value="{{ milk.slug }}">
+      {% coffee_cup variant.layers iced=variant.is_iced milk_color=milk.color label=milk.name decorative=True %}
+      <span class="option-title">{{ milk.name }}</span>
+      <span class="option-meta">
+        <span class="price-tag">{% if milk.price %}+ {{ milk.price|money }}{% else %}Included{% endif %}</span>
+      </span>
+    </button>
+  {% endfor %}
+</form>
+{% endblock %}

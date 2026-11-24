@@ -179,3 +179,5 @@ CAFE_CURRENCY = env("CAFE_CURRENCY", "EUR")
 TAKEAWAY_CUP_FEE = Decimal(env("TAKEAWAY_CUP_FEE", "0.30"))
 MAX_FLAVOURS_PER_DRINK = 3
 MAX_QUANTITY_PER_ORDER = 10
+# How long the "preparing your coffee" screen lasts before the order is ready for pickup.
+COFFEE_PREP_SECONDS = int(env("COFFEE_PREP_SECONDS", "10"))

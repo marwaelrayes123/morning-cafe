@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Welcome · Morning Cafe{% endblock %}
+
+{% block hero %}
+<section class="hero">
+  <img class="hero-bg" src="{% static 'web/img/hero-rainy-cafe.jpg' %}" width="1536" height="1024"
+       alt="A woman in a leather jacket smiling over a steaming latte by a rainy cafe window">
+  <div class="hero-shade" aria-hidden="true"></div>
+
+  <div class="hero-text">
+    <p class="eyebrow">Fresh every morning</p>
+    <h1>Welcome to Morning Cafe</h1>
+    <p class="lead" data-testid="welcome-text">
+      Good morning! Build your perfect coffee your way, then order it in a few clicks.
+    </p>
+    <a class="button" href="{% url 'web:menu' %}">See our menu</a>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="steps" aria-labelledby="how-it-works">
+  <h2 id="how-it-works">How it works</h2>
+  <ol class="step-list">
+    {% for icon, title, text in steps %}
+    <li class="step">
+      <span class="step-icon" aria-hidden="true">{{ icon }}</span>
+      <h3>{{ title }}</h3>
+      <p>{{ text }}</p>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

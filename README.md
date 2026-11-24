@@ -33,8 +33,22 @@ No MySQL handy? Set `DB_ENGINE=sqlite` in `.env`.
 
 ```powershell
 python manage.py migrate
+python manage.py seed_menu      # load the coffees, milks and sizes (safe to run again)
 python manage.py runserver
 ```
+
+Open http://127.0.0.1:8000/ → **See our menu** → coffee → type → milk → size →
+check the price → **Agree & pay** → fake card → preparing → ready for pickup.
+
+| Test card | Result |
+|-----------|--------|
+| `4242 4242 4242 4242` | Approved |
+| `4000 0000 0000 0002` | Declined (you can retry) |
+
+Use any future expiry (e.g. `12/30`) and any 3-digit CVC. The "preparing" screen
+lasts `COFFEE_PREP_SECONDS` (default 10) from `.env`.
+
+Edit the menu in the admin (`python manage.py createsuperuser`, then `/admin/`).
 
 ## Test & lint
 

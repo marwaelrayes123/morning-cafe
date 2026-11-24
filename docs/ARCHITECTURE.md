@@ -6,28 +6,40 @@ pays with a **fake card**, and gets a thank-you page. No real money, no real car
 
 ## 1. Customer journey
 
+> **Revised in step 3:** the flow is now coffee → sub-category → milk → size → price → pay →
+> preparing → pickup. Flavours, dine-in/takeaway and quantity from the first draft are not built.
+
 ```mermaid
 flowchart LR
-    H[🏠 Home<br/>welcome] --> M[☕ Menu<br/>coffee types]
-    M --> C[✨ Customize<br/>flavours · dine-in/takeaway · qty]
-    C --> S[🧾 Summary<br/>cost breakdown]
-    S --> P[💳 Pay<br/>fake card]
-    P -->|approved| T[🙏 Thank you<br/>order number]
+    H[🏠 Home] --> M[☕ Menu<br/>coffee types]
+    M --> V[✨ Type<br/>sub-category]
+    V -->|contains milk| K[🥛 Milk]
+    V -->|no milk| Z[📏 Size]
+    K --> Z
+    Z --> R[🧾 Price<br/>agree?]
+    R -->|Agree & pay| P[💳 Pay<br/>fake card]
+    R -->|change| V
     P -->|declined| P
-    S -->|change| C
+    P -->|approved| W[⏳ Preparing<br/>animation]
+    W --> D[✅ Ready<br/>pick up]
 ```
 
 | # | URL | Page | What happens |
 |---|-----|------|--------------|
-| 1 | `/` | **Home** | Welcome message, short intro, "See our menu" button |
-| 2 | `/menu/` | **Menu** | Coffee types from the database (name, description, price) |
-| 3 | `/order/<coffee>/` | **Customize** | Optional flavours (multi-select), dine-in or takeaway, quantity. Price updates live. |
-| 4 | `/order/summary/` | **Summary** | Line-by-line cost: coffee, flavours, takeaway cup fee, total |
-| 5 | `/order/pay/` | **Pay** | Name + fake card form |
-| 6 | `/thank-you/<number>/` | **Thank you** | "Thank you, Sara!" + order number + what was ordered |
+| 1 | `/` | **Home** | Full-screen photo, welcome, "See our menu" |
+| 2 | `/menu/` | **Menu** | Coffee types with a picture and "from" price |
+| 3 | `/menu/<coffee>/` | **Type** | Sub-categories (e.g. Caramel Latte) with layered pictures and prices |
+| 4 | `/order/milk/` | **Milk** | Only for drinks with milk; the picture takes the milk's colour |
+| 5 | `/order/size/` | **Size** | Small / Medium / Large |
+| 6 | `/order/review/` | **Price** | Line-by-line price and total; "Agree & pay" places a pending `Order` |
+| 7 | `/order/<number>/pay/` | **Pay** | Name + fake card |
+| 8 | `/order/<number>/preparing/` | **Preparing** | Cup fills up for `COFFEE_PREP_SECONDS`, then moves on by itself |
+| 9 | `/order/<number>/ready/` | **Ready** | "Your Caramel Latte is ready, Sara!" + order number |
 
-The draft order (steps 3–4) is kept in the browser session. It is saved to the
-database as an `Order` only when the customer goes to pay.
+The selection (steps 3–5) is kept in the browser session as slugs; prices are always
+read fresh from the menu. Data model: `Coffee` → `CoffeeVariant` (sub-category, price,
+`contains_milk`, picture `layers`), `MilkOption` (+price), `Size` (+price).
+Price = variant + milk + size (`StandardPricing`).
 
 ## 2. Tech stack
 

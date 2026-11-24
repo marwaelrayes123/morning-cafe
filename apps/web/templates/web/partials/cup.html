@@ -1,0 +1,59 @@
+<figure class="cup-art {{ css_class }}"{% if decorative %} aria-hidden="true"{% endif %}>
+  <svg class="cup" viewBox="0 0 160 170"{% if not decorative %} role="img" aria-label="{{ label }}"{% endif %}>
+    <defs>
+      <clipPath id="{{ uid }}-glass">
+        <path d="M30 30 L130 30 L121 146 Q120 154 111 154 L49 154 Q40 154 39 146 Z"/>
+      </clipPath>
+      <linearGradient id="{{ uid }}-shine" x1="0" x2="1">
+        <stop offset="0" stop-color="#fff" stop-opacity=".45"/>
+        <stop offset=".18" stop-color="#fff" stop-opacity=".08"/>
+        <stop offset=".8" stop-color="#fff" stop-opacity="0"/>
+        <stop offset="1" stop-color="#fff" stop-opacity=".25"/>
+      </linearGradient>
+    </defs>
+
+    {% if not iced %}
+    <g class="steam" fill="none" stroke="#b08d74" stroke-width="3" stroke-linecap="round">
+      <path class="steam-1" d="M66 28 c-6 -7 6 -12 0 -20 c-4 -6 4 -10 0 -16"/>
+      <path class="steam-2" d="M80 26 c-6 -7 6 -12 0 -20 c-4 -6 4 -10 0 -16"/>
+      <path class="steam-3" d="M94 28 c-6 -7 6 -12 0 -20 c-4 -6 4 -10 0 -16"/>
+    </g>
+    {% endif %}
+
+    <ellipse cx="80" cy="158" rx="64" ry="8" fill="#e6d6c5"/>
+    {% if iced %}
+      <path d="M96 6 L88 60" stroke="#e07a5f" stroke-width="6" stroke-linecap="round"/>
+    {% else %}
+      <path d="M127 56 q28 0 26 26 q-2 26 -30 26" fill="none" stroke="#e9ddd1" stroke-width="8"/>
+    {% endif %}
+
+    <g clip-path="url(#{{ uid }}-glass)">
+      <rect x="0" y="0" width="160" height="160" fill="#fffaf4" opacity=".55"/>
+      <g class="cup-fill">
+        {% for s in shapes %}
+          <rect x="0" y="{{ s.y }}" width="160" height="{{ s.height }}" fill="{{ s.color }}">
+            <title>{{ s.label }}</title>
+          </rect>
+        {% endfor %}
+      </g>
+      {% if iced %}
+        <g fill="#ffffff" fill-opacity=".55" stroke="#ffffff" stroke-opacity=".9" stroke-width="1.5">
+          <rect x="48" y="52" width="22" height="22" rx="4" transform="rotate(-12 59 63)"/>
+          <rect x="80" y="62" width="22" height="22" rx="4" transform="rotate(10 91 73)"/>
+          <rect x="60" y="84" width="20" height="20" rx="4" transform="rotate(25 70 94)"/>
+        </g>
+      {% endif %}
+      <rect x="0" y="0" width="160" height="160" fill="url(#{{ uid }}-shine)"/>
+    </g>
+    <path d="M30 30 L130 30 L121 146 Q120 154 111 154 L49 154 Q40 154 39 146 Z"
+          fill="none" stroke="#cdb7a3" stroke-width="3" stroke-linejoin="round"/>
+  </svg>
+
+  {% if legend and legend_items %}
+  <figcaption class="cup-legend">
+    {% for s in legend_items %}
+      <span class="legend-item"><i style="background: {{ s.color }}"></i>{{ s.label }}</span>
+    {% endfor %}
+  </figcaption>
+  {% endif %}
+</figure>

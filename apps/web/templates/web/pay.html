@@ -1,0 +1,42 @@
+{% extends "web/base.html" %}
+{% load cafe %}
+
+{% block title %}Pay · Morning Cafe{% endblock %}
+
+{% block content %}
+{% include "web/partials/steps.html" with current=5 %}
+
+<section class="pay">
+  <div class="pay-summary">
+    {% coffee_cup order.picture.layers iced=order.picture.iced milk_color=order.picture.milk_color label=order.variant_name %}
+    <p class="pay-item">{{ order.variant_name }}{% if order.milk_name %} · {{ order.milk_name }}{% endif %} · {{ order.size_name }}</p>
+    <p class="pay-total">{{ order.total|money }}</p>
+  </div>
+
+  <form method="post" class="pay-form" novalidate>
+    {% csrf_token %}
+    <h1>Pay with card</h1>
+
+    {% if form.non_field_errors %}
+      <div class="form-error" role="alert">{{ form.non_field_errors|join:" " }}</div>
+    {% endif %}
+
+    {% for field in form %}
+      <div class="field{% if field.errors %} field--error{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+
+    <button class="button button-wide" type="submit">Pay {{ order.total|money }}</button>
+
+    <aside class="test-cards">
+      <strong>This is a practice shop. Use a test card:</strong>
+      <span>✅ <code>{{ approved_card }}</code> approved</span>
+      <span>❌ <code>{{ declined_card }}</code> declined</span>
+      <span>Any future expiry date (e.g. 12/30) and any 3-digit CVC.</span>
+    </aside>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "web/base.html" %}
+{% load cafe %}
+
+{% block title %}Menu · Morning Cafe{% endblock %}
+
+{% block content %}
+{% include "web/partials/steps.html" with current=1 %}
+
+<header class="page-header">
+  <h1>Our menu</h1>
+  <p class="lead">Pick a coffee to see all the ways we make it.</p>
+</header>
+
+{% if coffees %}
+  <ul class="card-grid" data-testid="coffee-list">
+    {% for coffee in coffees %}
+      <li>
+        <a class="menu-card" href="{% url 'web:coffee' coffee.slug %}">
+          {% coffee_cup coffee.layers iced=coffee.is_iced label=coffee.name decorative=True %}
+          <span class="menu-card-body">
+            <span class="menu-card-title">{{ coffee.name }}</span>
+            <span class="menu-card-text">{{ coffee.description }}</span>
+            <span class="price-tag">from {{ coffee.from_price|money }}</span>
+          </span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="empty-state">
+    The menu is empty. Load the starter menu with <code>python manage.py seed_menu</code>.
+  </p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+{% load cafe %}
+
+{% block title %}Ready for pickup · Morning Cafe{% endblock %}
+
+{% block content %}
+{% include "web/partials/steps.html" with current=6 %}
+
+<section class="ready">
+  <div class="ready-art">
+    {% coffee_cup order.picture.layers iced=order.picture.iced milk_color=order.picture.milk_color label=order.variant_name css_class="cup-art--large" %}
+    <span class="ready-check" aria-hidden="true">✓</span>
+  </div>
+
+  <h1>Your {{ order.variant_name }} is ready, {{ order.customer_name }}!</h1>
+  <p class="lead">Please pick it up at the counter. Enjoy! ☕</p>
+
+  <div class="pickup-ticket">
+    <span>Order number</span>
+    <strong data-testid="order-number">{{ order.number }}</strong>
+  </div>
+
+  <table class="price-table price-table--compact">
+    <tbody>
+      {% for label, amount in order.price_lines %}
+        <tr><th scope="row">{{ label }}</th><td>{{ amount|money }}</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><th scope="row">Paid</th><td>{{ order.total|money }}</td></tr>
+    </tfoot>
+  </table>
+
+  <a class="button" href="{% url 'web:menu' %}">Order another coffee</a>
+</section>
+{% endblock %}

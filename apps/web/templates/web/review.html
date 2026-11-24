@@ -1,0 +1,40 @@
+{% extends "web/base.html" %}
+{% load cafe %}
+
+{% block title %}Your order · Morning Cafe{% endblock %}
+
+{% block content %}
+{% include "web/partials/steps.html" with current=4 %}
+
+<section class="review">
+  {% coffee_cup priced.variant.layers iced=priced.variant.is_iced milk_color=priced.milk.color label=priced.variant.name css_class="cup-art--large" legend=True %}
+
+  <div class="receipt">
+    <h1>Here's your {{ priced.variant.name }}</h1>
+    <p class="lead">Please check your order and the price.</p>
+
+    <table class="price-table" data-testid="price-lines">
+      <tbody>
+        {% for line in priced.quote.lines %}
+          <tr>
+            <th scope="row">{{ line.label }}</th>
+            <td>{% if forloop.first %}{{ line.amount|money }}{% else %}+ {{ line.amount|money }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row">Total</th>
+          <td data-testid="total">{{ priced.quote.total|money }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <form method="post" class="actions">
+      {% csrf_token %}
+      <button class="button" type="submit">Agree &amp; pay {{ priced.quote.total|money }}</button>
+      <a class="button button-secondary" href="{% url 'web:coffee' priced.variant.coffee.slug %}">Change my order</a>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "web/base.html" %}
+{% load cafe %}
+
+{% block title %}Preparing your coffee · Morning Cafe{% endblock %}
+
+{% block extra_head %}
+  {# Works without JavaScript: the browser moves to the "ready" page when the coffee is done. #}
+  <meta http-equiv="refresh" content="{{ remaining|add:1 }};url={% url 'web:order_ready' order.number %}">
+{% endblock %}
+
+{% block content %}
+{% include "web/partials/steps.html" with current=6 %}
+
+<section class="preparing" style="--prep: {{ prep_seconds }}s; --elapsed: -{{ elapsed }}s; --stage: {{ stage_length }}s;">
+  <h1>Preparing your {{ order.variant_name }}…</h1>
+  <p class="lead">Thank you, {{ order.customer_name }}! Our barista is on it.</p>
+
+  <div class="barista" aria-hidden="true">
+    <svg class="machine" viewBox="0 0 220 120">
+      <rect x="20" y="0" width="180" height="62" rx="14" fill="#5b3a29"/>
+      <rect x="34" y="14" width="64" height="20" rx="6" fill="#2b1d14"/>
+      <circle cx="160" cy="24" r="10" fill="#c0703c"/>
+      <circle cx="160" cy="24" r="4" fill="#ffd9a0" class="machine-light"/>
+      <rect x="90" y="62" width="40" height="14" rx="4" fill="#3a2418"/>
+      <rect x="102" y="76" width="16" height="8" rx="2" fill="#2b1d14"/>
+      <line class="pour" x1="110" y1="84" x2="110" y2="120" stroke="#5a2f17" stroke-width="5"
+            stroke-linecap="round"/>
+    </svg>
+    {% coffee_cup order.picture.layers iced=order.picture.iced milk_color=order.picture.milk_color label=order.variant_name css_class="cup-art--large cup-art--filling" %}
+  </div>
+
+  <div class="progress" role="progressbar" aria-label="Preparing">
+    <span></span>
+  </div>
+
+  <ol class="prep-stages">
+    {% for label, start in stages %}
+      <li style="animation-delay: calc({{ start }}s + var(--elapsed));">{{ label }}</li>
+    {% endfor %}
+  </ol>
+
+  <p class="order-number">Order <strong>{{ order.number }}</strong></p>
+  <p class="muted"><a href="{% url 'web:order_ready' order.number %}">Is it ready?</a></p>
+</section>
+{% endblock %}
