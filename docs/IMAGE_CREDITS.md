@@ -19,8 +19,8 @@ Each coffee **type** has one standard photo in its own cup; all its variants use
 
 Page background: `apps/web/static/web/img/dark-wood.jpg` — https://www.pexels.com/photo/3705687/
 
-Syrup bottles, milk cartons and the size cups are not photos: they are drawn in the page
-(`web/partials/syrup_bottle.html`, `milk_carton.html`, `size_cup.html`) in each item's colour with
+Syrup bottles and milk cartons are not photos: they are drawn in the page
+(`web/partials/syrup_bottle.html`, `milk_carton.html`) in each item's colour with
 its name on the label, so new syrups and milks get their picture automatically.
 
 The home page photo (`apps/web/static/web/img/hero-rainy-cafe.jpg`) was supplied by the project owner.

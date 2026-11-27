@@ -6,7 +6,6 @@ Usage:
     {{ variant.price|money:"+" }}    -> "+ 6 kr."
     {% syrup_bottle syrup.name syrup.color %}
     {% milk_carton milk.name milk.color milk.is_plant_based %}
-    {% size_cup forloop.counter %}
 """
 
 import secrets
@@ -81,9 +80,3 @@ def milk_carton(name: str, color: str, plant_based: bool = False, css_class: str
         "plant_based": plant_based,
         "css_class": css_class,
     }
-
-
-@register.inclusion_tag("web/partials/size_cup.html")
-def size_cup(step: int = 1, css_class: str = ""):
-    """A cafe cup drawn bigger for each size step (1 = small, 2 = medium, 3 = large)."""
-    return {"uid": "size-" + secrets.token_hex(4), "step": step, "css_class": css_class}

@@ -624,12 +624,18 @@ body {
 .shelf-card:hover .shelf-card-art svg { transform: rotate(-4deg); transition: transform 0.2s ease; }
 .shelf-card-none { color: #c9b6a4; font-size: 2.2rem; align-items: center; }
 
-/* Sizes: the same cafe cup drawn bigger */
-.size-art { height: 130px; }
-.size-art .size-cup { height: auto; }
-.size-art .size-cup--1 { width: 80px; }
-.size-art .size-cup--2 { width: 112px; }
-.size-art .size-cup--3 { width: 144px; }
+/* Sizes: the drink's own cup photo, bigger for each size */
+.size-art { height: 170px; }
+.size-photo {
+  display: block;
+  object-fit: cover;
+  border: 3px solid #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 22px -12px rgba(40, 20, 10, 0.7);
+}
+.size-photo--1 { width: 84px; height: 100px; }
+.size-photo--2 { width: 112px; height: 134px; }
+.size-photo--3 { width: 140px; height: 168px; }
 .size-card .option-text { color: var(--muted); font-size: 0.9rem; }
 
 @media (max-width: 760px) {
@@ -638,8 +644,8 @@ body {
   .shelf-grid { grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
   .shelf-grid--sizes { grid-template-columns: repeat(3, 1fr); }
   .shelf-card-art { height: 110px; }
-  .size-art { height: 90px; }
-  .size-art .size-cup--1 { width: 54px; }
-  .size-art .size-cup--2 { width: 74px; }
-  .size-art .size-cup--3 { width: 94px; }
+  .size-art { height: 110px; }
+  .size-photo--1 { width: 54px; height: 64px; }
+  .size-photo--2 { width: 72px; height: 86px; }
+  .size-photo--3 { width: 90px; height: 108px; }
 }

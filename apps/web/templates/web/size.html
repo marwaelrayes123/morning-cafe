@@ -1,5 +1,5 @@
 {% extends "web/base.html" %}
-{% load cafe %}
+{% load static cafe %}
 
 {% block title %}Choose a size · Morning Cafe{% endblock %}
 
@@ -24,7 +24,9 @@
   {% csrf_token %}
   {% for size in sizes %}
     <button class="shelf-card size-card" type="submit" name="size" value="{{ size.slug }}">
-      <span class="shelf-card-art size-art" aria-hidden="true">{% size_cup forloop.counter %}</span>
+      <span class="shelf-card-art size-art" aria-hidden="true">
+        <img class="size-photo size-photo--{{ forloop.counter }}" src="{% static variant.photo %}" alt="">
+      </span>
       <span class="option-title">{{ size.name }}</span>
       <span class="option-text">{{ size.volume_ml }} ml</span>
       <span class="price-tag">{% if size.price %}{{ size.price|money:"+" }}{% else %}Included{% endif %}</span>
