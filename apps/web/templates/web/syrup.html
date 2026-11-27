@@ -16,7 +16,7 @@
   <p class="lead">A pump of flavour from our bottles, or keep it pure.</p>
 </header>
 
-<form method="post" class="shelf-grid">
+<form method="post" class="shelf-grid shelf-grid--syrups">
   {% csrf_token %}
   {% for syrup in syrups %}
     <button class="shelf-card{% if selected == syrup.slug %} is-selected{% endif %}" type="submit"

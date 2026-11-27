@@ -1,13 +1,13 @@
-{% load static %}<!doctype html>
+{% load static cafe %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Morning Cafe{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'web/css/site.css' %}">
+  <link rel="stylesheet" href="{% static_versioned 'web/css/site.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}fit-screen{% endblock %}">
   <header class="site-header">
     <a class="brand" href="{% url 'web:home' %}">☕ Morning Cafe</a>
     <nav aria-label="Main">

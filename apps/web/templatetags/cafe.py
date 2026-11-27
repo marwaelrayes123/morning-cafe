@@ -6,15 +6,29 @@ Usage:
     {{ variant.price|money:"+" }}    -> "+ 6 kr."
     {% syrup_bottle syrup.name syrup.color %}
     {% milk_carton milk.name milk.color milk.is_plant_based %}
+    {% static_versioned "web/css/site.css" %}  -> "/static/web/css/site.css?v=1764240000"
 """
 
 import secrets
 from decimal import Decimal
+from pathlib import Path
 
 from django import template
 from django.conf import settings
+from django.contrib.staticfiles import finders
+from django.templatetags.static import static
 
 register = template.Library()
+
+
+@register.simple_tag
+def static_versioned(path: str) -> str:
+    """Static URL plus the file's change time, so browsers fetch it again after every edit."""
+    url = static(path)
+    found = finders.find(path)
+    if not found:
+        return url
+    return f"{url}?v={int(Path(found).stat().st_mtime)}"
 
 
 def format_money(value: Decimal, currency: str) -> str:

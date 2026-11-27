@@ -12,7 +12,7 @@
 </header>
 
 {% if coffees %}
-  <ul class="card-grid" data-testid="coffee-list">
+  <ul class="card-grid card-grid--menu" data-testid="coffee-list">
     {% for coffee in coffees %}
       <li>
         <a class="menu-card" href="{% url 'web:coffee' coffee.slug %}">
