@@ -6,7 +6,7 @@ def normalize_card_number(raw: str) -> str:
     return "".join(ch for ch in raw if ch not in " -")
 
 
-def luhn_valid(number: str) -> bool:
+def is_luhn_valid(number: str) -> bool:
     """True if `number` is 12-19 digits and passes the Luhn checksum."""
     if not number.isdigit() or not 12 <= len(number) <= 19:
         return False

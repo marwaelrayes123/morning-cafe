@@ -13,7 +13,7 @@ from apps.payments.gateway import APPROVED_TEST_CARD, DECLINED_TEST_CARD
 from apps.payments.models import Payment
 from apps.payments.services import PaymentService
 
-from .draft import DraftSession
+from .draft_session import DraftSession
 from .forms import PaymentForm
 
 PREP_STAGES = [

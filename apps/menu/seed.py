@@ -13,25 +13,25 @@ from .models import Coffee, CoffeeVariant, MilkOption, Size, Syrup
 # --- Layer building blocks (what is in the cup, bottom to top) ---------------
 
 
-def layer(label: str, color: str, ratio: float, kind: str = "coffee") -> dict:
+def _layer(label: str, color: str, ratio: float, kind: str = "coffee") -> dict:
     return {"label": label, "color": color, "ratio": ratio, "kind": kind}
 
 
-ESPRESSO = layer("Espresso", "#4a2716", 1)
-CREMA = layer("Crema", "#b5763e", 0.3)
-WATER = layer("Hot water", "#7a4a2a", 3, "water")
-MILK = layer("Steamed milk", "#fbf4e8", 2, "milk")
-COLD_MILK = layer("Cold milk", "#fbf4e8", 2, "milk")
-FOAM = layer("Milk foam", "#fffdf8", 1, "foam")
-ICE = layer("Ice", "#e8f1f5", 1, "ice")
-CHOCOLATE = layer("Chocolate", "#5b3320", 0.8)
-WHITE_CHOCOLATE = layer("White chocolate", "#efe0c6", 0.8)
-CREAM = layer("Whipped cream", "#fff8ee", 0.7, "cream")
-CINNAMON = layer("Cinnamon", "#a0592b", 0.15, "topping")
-COLD_BREW = layer("Cold brew", "#3b2012", 3)
+ESPRESSO = _layer("Espresso", "#4a2716", 1)
+CREMA = _layer("Crema", "#b5763e", 0.3)
+WATER = _layer("Hot water", "#7a4a2a", 3, "water")
+MILK = _layer("Steamed milk", "#fbf4e8", 2, "milk")
+COLD_MILK = _layer("Cold milk", "#fbf4e8", 2, "milk")
+FOAM = _layer("Milk foam", "#fffdf8", 1, "foam")
+ICE = _layer("Ice", "#e8f1f5", 1, "ice")
+CHOCOLATE = _layer("Chocolate", "#5b3320", 0.8)
+WHITE_CHOCOLATE = _layer("White chocolate", "#efe0c6", 0.8)
+CREAM = _layer("Whipped cream", "#fff8ee", 0.7, "cream")
+CINNAMON = _layer("Cinnamon", "#a0592b", 0.15, "topping")
+COLD_BREW = _layer("Cold brew", "#3b2012", 3)
 
 
-def variant(name, description, price, *, milk=False, syrup=True, layers=()):
+def _variant(name, description, price, *, milk=False, syrup=True, layers=()):
     return {
         "name": name,
         "description": description,
@@ -52,28 +52,28 @@ COFFEES = [
         "name": "Espresso",
         "description": "Short, strong and intense. Served in a small espresso cup.",
         "variants": [
-            variant(
+            _variant(
                 "Single Espresso",
                 "One rich shot with golden crema.",
                 "32",
                 syrup=False,
                 layers=[ESPRESSO, CREMA],
             ),
-            variant(
+            _variant(
                 "Doppio",
                 "A double shot for a double wake-up.",
                 "38",
                 syrup=False,
                 layers=[ESPRESSO, ESPRESSO, CREMA],
             ),
-            variant(
+            _variant(
                 "Ristretto",
                 "A shorter, sweeter, more concentrated shot.",
                 "34",
                 syrup=False,
                 layers=[ESPRESSO, CREMA],
             ),
-            variant(
+            _variant(
                 "Macchiato",
                 "Espresso marked with a spoon of milk foam.",
                 "38",
@@ -87,14 +87,14 @@ COFFEES = [
         "name": "Americano",
         "description": "Espresso topped up with hot water. Smooth and long.",
         "variants": [
-            variant("Classic Americano", "Espresso with hot water.", "38", layers=[ESPRESSO, WATER, CREMA]),
-            variant(
+            _variant("Classic Americano", "Espresso with hot water.", "38", layers=[ESPRESSO, WATER, CREMA]),
+            _variant(
                 "Long Black",
                 "Water first, espresso on top. Keeps the crema.",
                 "40",
                 layers=[WATER, ESPRESSO, CREMA],
             ),
-            variant(
+            _variant(
                 "Americano with Milk",
                 "A splash of milk to soften it.",
                 "42",
@@ -107,11 +107,13 @@ COFFEES = [
         "name": "Cappuccino",
         "description": "Equal parts espresso, steamed milk and silky foam.",
         "variants": [
-            variant(
+            _variant(
                 "Classic Cappuccino", "The balanced classic.", "45", milk=True, layers=[ESPRESSO, MILK, FOAM]
             ),
-            variant("Dry Cappuccino", "Less milk, more airy foam.", "45", milk=True, layers=[ESPRESSO, FOAM]),
-            variant(
+            _variant(
+                "Dry Cappuccino", "Less milk, more airy foam.", "45", milk=True, layers=[ESPRESSO, FOAM]
+            ),
+            _variant(
                 "Cinnamon Cappuccino",
                 "Dusted with warm cinnamon.",
                 "48",
@@ -124,17 +126,17 @@ COFFEES = [
         "name": "Latte",
         "description": "Espresso with lots of creamy steamed milk, served in a glass.",
         "variants": [
-            variant(
+            _variant(
                 "Classic Latte", "Mellow, milky and smooth.", "48", milk=True, layers=[ESPRESSO, MILK, FOAM]
             ),
-            variant(
+            _variant(
                 "Latte Macchiato",
                 "Milk first, espresso poured through it in layers.",
                 "50",
                 milk=True,
                 layers=[MILK, ESPRESSO, FOAM],
             ),
-            variant(
+            _variant(
                 "Double Shot Latte",
                 "Two shots for a stronger latte.",
                 "54",
@@ -147,14 +149,14 @@ COFFEES = [
         "name": "Flat White",
         "description": "Strong espresso with a thin layer of velvety micro-foam.",
         "variants": [
-            variant(
+            _variant(
                 "Classic Flat White",
                 "Two shots and silky milk.",
                 "48",
                 milk=True,
                 layers=[ESPRESSO, MILK, FOAM],
             ),
-            variant(
+            _variant(
                 "Ristretto Flat White",
                 "Made with sweeter ristretto shots.",
                 "50",
@@ -167,14 +169,14 @@ COFFEES = [
         "name": "Mocha",
         "description": "Espresso, chocolate and milk. Dessert in a mug.",
         "variants": [
-            variant(
+            _variant(
                 "Classic Mocha",
                 "Dark chocolate and whipped cream.",
                 "52",
                 milk=True,
                 layers=[CHOCOLATE, ESPRESSO, MILK, CREAM],
             ),
-            variant(
+            _variant(
                 "White Mocha",
                 "Creamy white chocolate.",
                 "55",
@@ -188,17 +190,17 @@ COFFEES = [
         "description": "Cold, refreshing and served over ice in a glass.",
         "is_iced": True,
         "variants": [
-            variant(
+            _variant(
                 "Iced Latte",
                 "Espresso poured over cold milk and ice.",
                 "52",
                 milk=True,
                 layers=[ICE, COLD_MILK, ESPRESSO],
             ),
-            variant(
+            _variant(
                 "Cold Brew", "Steeped for 18 hours. Smooth, never bitter.", "45", layers=[ICE, COLD_BREW]
             ),
-            variant(
+            _variant(
                 "Iced Macchiato",
                 "Cold milk and ice with a shot poured on top.",
                 "52",

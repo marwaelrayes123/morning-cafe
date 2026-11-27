@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-from apps.web.templatetags.cafe import format_money, money
+from apps.web.templatetags.cafe_tags import format_money, money
 
 
 @pytest.mark.parametrize(

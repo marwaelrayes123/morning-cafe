@@ -3,7 +3,7 @@ from datetime import date
 
 from django import forms
 
-from apps.payments.validators import luhn_valid, normalize_card_number
+from apps.payments.validators import is_luhn_valid, normalize_card_number
 
 
 class PaymentForm(forms.Form):
@@ -38,7 +38,7 @@ class PaymentForm(forms.Form):
 
     def clean_card_number(self) -> str:
         number = normalize_card_number(self.cleaned_data["card_number"])
-        if not luhn_valid(number):
+        if not is_luhn_valid(number):
             raise forms.ValidationError("This card number is not valid.")
         return number
 

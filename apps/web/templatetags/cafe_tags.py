@@ -1,7 +1,7 @@
 """Template helpers: prices and syrup bottles.
 
 Usage:
-    {% load cafe %}
+    {% load cafe_tags %}
     {{ variant.price|money }}        -> "52 kr."   (DKK)
     {{ variant.price|money:"+" }}    -> "+ 6 kr."
     {% syrup_bottle syrup.name syrup.color %}
